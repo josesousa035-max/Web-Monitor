@@ -1,0 +1,52 @@
+{
+  "name": "web-monitor",
+  "version": "0.2.0",
+  "description": "Monitor imobiliário local e privado",
+  "author": "Web Monitor",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "src/desktop/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "benchmark": "node tests/benchmark.cjs",
+    "build": "electron-builder --dir",
+    "dist": "electron-builder",
+    "test:desktop": "electron tests/desktop-smoke.cjs",
+    "postinstall": "node node_modules/electron/install.js",
+    "preview": "node scripts/build-preview.cjs"
+  },
+  "dependencies": {
+    "cheerio": "1.0.0",
+    "csv-parse": "7.0.3",
+    "mailparser": "3.12.4",
+    "robots-parser": "3.0.1",
+    "sql.js": "1.13.0"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0",
+    "jsdom": "26.1.0"
+  },
+  "build": {
+    "appId": "pt.webmonitor.desktop",
+    "productName": "Web Monitor",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/sql.js/dist/*.wasm"
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.finance"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

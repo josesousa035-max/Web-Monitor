@@ -1,0 +1,4 @@
+[
+  {"source":"idealista","reference":"SYNTHETIC-001","url":"https://www.idealista.pt/imovel/synthetic-001/","title":"EXEMPLO SINTÉTICO — Moradia T3","location":"Póvoa de Lanhoso","price":"185.000,00","area":140,"typology":"T3","propertyType":"Moradia","description":"Dados exclusivamente demonstrativos. Não é um anúncio real."},
+  {"source":"boulder","reference":"SYNTHETIC-002","url":"https://boulderimobiliaria.pt/imovel/synthetic-002","title":"EXEMPLO SINTÉTICO — Apartamento T2","location":"Póvoa de Lanhoso","price":130000,"area":90,"typology":"T2","propertyType":"Apartamento","description":"Dados exclusivamente demonstrativos. Não é um anúncio real."}
+]

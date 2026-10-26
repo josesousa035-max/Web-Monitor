@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="pt-PT">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'"
+    />
+    <title>Web Monitor</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <aside>
+      <div class="brand">◈ <strong>Web Monitor</strong></div>
+      <p class="muted">O seu observatório imobiliário</p>
+      <nav>
+        <button data-view="dashboard" class="active">▦ &nbsp; Imóveis</button
+        ><button data-view="zones">◎ &nbsp; Zonas de interesse</button
+        ><button data-view="sources">⇄ &nbsp; Fontes e importação</button
+        ><button data-view="alerts">♧ &nbsp; Alertas</button
+        ><button data-view="settings">⚙ &nbsp; Configurações</button>
+      </nav>
+      <div class="local">
+        <span class="dot"></span> Dados guardados neste computador<br /><small
+          >Consulta disponível sem Internet</small
+        >
+      </div>
+    </aside>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow" id="zone-label">PÓVOA DE LANHOSO</p>
+          <h1 id="heading">Os seus imóveis, em perspetiva.</h1>
+          <p class="muted">Acompanhe oportunidades e a evolução dos preços.</p>
+        </div>
+        <button id="import-top" class="primary">＋ Importar anúncios</button>
+      </header>
+      <p id="message" role="status" aria-live="polite"></p>
+      <section id="dashboard">
+        <div class="toolbar">
+          <label class="inline-label"
+            >Zona ativa<select id="zone-filter">
+              <option value="">Todas as localizações</option>
+            </select></label
+          >
+          <p class="muted" id="zone-summary"></p>
+        </div>
+        <div id="stats" class="stats"></div>
+        <div class="toolbar">
+          <input
+            id="search"
+            placeholder="Pesquisar título, localização ou referência…"
+            aria-label="Pesquisar"
+          /><select id="source-filter" aria-label="Fonte">
+            <option value="">Todas as fontes</option>
+            <option value="idealista">Idealista</option>
+            <option value="remax">RE/MAX</option>
+            <option value="boulder">Boulder</option></select
+          ><select id="sort" aria-label="Ordenação">
+            <option value="recent">Mais recentes</option>
+            <option value="price">Preço mais baixo</option>
+            <option value="drop">Maior descida %</option>
+            <option value="sqm">Preço por m²</option>
+          </select>
+        </div>
+        <div class="toolbar">
+          <input
+            id="min"
+            type="number"
+            min="0"
+            placeholder="Preço mínimo €"
+            aria-label="Preço mínimo"
+          /><input
+            id="max"
+            type="number"
+            min="0"
+            placeholder="Preço máximo €"
+            aria-label="Preço máximo"
+          /><input
+            id="typology"
+            placeholder="Tipologia (ex.: T3)"
+            aria-label="Tipologia"
+          /><input
+            id="area"
+            type="number"
+            min="0"
+            placeholder="Área mínima m²"
+            aria-label="Área mínima"
+          />
+        </div>
+        <div class="section-title">
+          <h2>Imóveis monitorizados</h2>
+          <span id="count" class="muted"></span>
+        </div>
+        <div id="listings"></div>
+        <div class="pagination">
+          <button id="previous">← Anterior</button><span id="page"></span
+          ><button id="next">Seguinte →</button>
+        </div>
+      </section>
+      <section id="sources" hidden>
+        <div class="section-title">
+          <h2>Catálogo de fontes</h2>
+          <button id="add-source" class="primary">＋ Adicionar fonte</button>
+        </div>
+        <p class="muted">
+          Descoberta, autorização e recolha são passos distintos. Uma fonte
+          listada não significa integração validada.
+        </p>
+        <div class="toolbar">
+          <button id="discover-osm">Procurar agências no OpenStreetMap</button
+          ><button id="discover">Preparar pesquisa da zona</button
+          ><button id="import-candidates">
+            Importar referências de fontes
+          </button>
+        </div>
+        <p class="muted">
+          Descoberta opcional: © OpenStreetMap contributors · ODbL. Identifica
+          agências mapeadas, não anúncios nem cobertura comercial. Resultados
+          podem estar incompletos ou desatualizados.
+        </p>
+        <div id="discovery-results"></div>
+        <div id="source-cards"></div>
+        <h2>Últimas importações</h2>
+        <div id="runs"></div>
+      </section>
+      <section id="zones" hidden>
+        <div class="section-title">
+          <h2>Zonas de interesse</h2>
+          <button id="add-zone" class="primary">＋ Criar zona</button>
+        </div>
+        <p class="muted">
+          Escolha um concelho ou defina um centro e raio. Sem coordenadas
+          suficientemente precisas, a aplicação não confirma inclusão no raio.
+        </p>
+        <div id="zone-cards"></div>
+      </section>
+      <section id="alerts" hidden>
+        <h2>Alertas locais</h2>
+        <p class="muted">
+          Registados após importação. Não há recolha automática ou monitorização
+          com a aplicação fechada.
+        </p>
+        <div id="alert-list"></div>
+      </section>
+      <section id="settings" hidden>
+        <h2>As suas preferências</h2>
+        <form id="settings-form">
+          <div id="url-fields"></div>
+          <label class="check"
+            ><input type="checkbox" id="notifications" /> Mostrar notificações
+            do sistema operativo</label
+          >
+          <p class="muted">
+            As notificações dependem das permissões do sistema operativo. A
+            aplicação não monitoriza quando está fechada.
+          </p>
+          <label class="check"
+            ><input type="checkbox" id="new-enabled" /> Registar novos
+            imóveis</label
+          ><label class="check"
+            ><input type="checkbox" id="drop-enabled" /> Registar descidas de
+            preço</label
+          ><label class="check"
+            ><input type="checkbox" id="threshold-enabled" /> Registar imóveis
+            abaixo do limite</label
+          ><label
+            >Limite em euros<input
+              id="threshold"
+              type="number"
+              min="0"
+              step="0.01"
+          /></label>
+          <h2>Pesquisas guardadas</h2>
+          <p class="muted">
+            Receba um alerta quando um imóvel começar a corresponder a uma
+            pesquisa.
+          </p>
+          <div id="saved-searches"></div>
+          <button type="button" id="add-search">＋ Adicionar pesquisa</button>
+          <button class="primary">Guardar configurações</button>
+        </form>
+        <h2>Dados e segurança</h2>
+        <p class="muted">
+          A exportação inclui anúncios, histórico e configurações. Antes de
+          importar ou restaurar, é criado um backup local.
+        </p>
+        <button id="export">Exportar backup</button>
+        <button id="restore">Restaurar backup…</button>
+      </section>
+    </main>
+    <dialog id="detail">
+      <button id="close-detail" class="close" aria-label="Fechar">✕</button>
+      <div id="detail-content"></div>
+    </dialog>
+    <dialog id="zone-dialog">
+      <form id="zone-form">
+        <h2>Zona de interesse</h2>
+        <input id="zone-id" type="hidden" /><label
+          >Nome<input id="zone-name" required maxlength="150" /></label
+        ><label>País<input id="zone-country" value="Portugal" /></label
+        ><label>Concelho<input id="zone-municipality" required /></label
+        ><label
+          >Localidades a incluir, separadas por vírgulas<input
+            id="zone-localities" /></label
+        ><label
+          >Modo<select id="zone-mode">
+            <option value="administrative">
+              Concelho / localidades (correspondência textual)
+            </option>
+            <option value="radius">Raio em torno de coordenadas</option>
+          </select></label
+        >
+        <div class="toolbar">
+          <label
+            >Latitude<input
+              id="zone-lat"
+              type="number"
+              min="-90"
+              max="90"
+              step="any" /></label
+          ><label
+            >Longitude<input
+              id="zone-lon"
+              type="number"
+              min="-180"
+              max="180"
+              step="any" /></label
+          ><label
+            >Raio (km)<input
+              id="zone-radius"
+              type="number"
+              min="0.1"
+              max="200"
+              step="any"
+          /></label>
+        </div>
+        <label class="check"
+          ><input id="zone-exact" type="checkbox" /> As coordenadas do centro
+          têm precisão confirmada</label
+        ><label
+          >Negócio<select id="zone-transaction">
+            <option value="sale">Compra</option>
+            <option value="rent">Arrendamento</option>
+          </select></label
+        >
+        <div class="toolbar">
+          <label
+            >Preço mínimo (€)<input
+              id="zone-min"
+              type="number"
+              min="0"
+              step="0.01" /></label
+          ><label
+            >Preço máximo (€)<input
+              id="zone-max"
+              type="number"
+              min="0"
+              step="0.01"
+          /></label>
+        </div>
+        <label
+          >Área mínima (m²)<input
+            id="zone-area"
+            type="number"
+            min="0"
+            step="any" /></label
+        ><label>Tipologia<input id="zone-typology" placeholder="T3" /></label
+        ><label
+          >Tipo de imóvel<input id="zone-property" placeholder="Moradia"
+        /></label>
+        <p id="zone-error" role="alert"></p>
+        <button class="primary">Guardar zona</button>
+        <button type="button" id="close-zone">Cancelar</button>
+      </form>
+    </dialog>
+    <dialog id="source-dialog">
+      <form id="source-form">
+        <h2>Fonte imobiliária</h2>
+        <input id="edit-source-id" type="hidden" /><label
+          >Nome<input id="source-name" required maxlength="150" /></label
+        ><label
+          >Site oficial (HTTPS)<input
+            id="source-homepage"
+            type="url"
+            required /></label
+        ><label
+          >Categoria<select id="source-kind">
+            <option value="local">Imobiliária local</option>
+            <option value="portal">Portal</option>
+            <option value="network">Rede de mediação</option>
+            <option value="agent">Mediador</option>
+            <option value="directory">Diretório</option>
+            <option value="other">Outra</option>
+          </select></label
+        ><label
+          >Pesquisa para a zona selecionada<input
+            id="source-search"
+            type="url" /></label
+        ><label
+          >Cobertura indicada (localizações separadas por vírgulas)<input
+            id="source-coverage" /></label
+        ><label
+          >Estado<select id="source-state">
+            <option value="discovered">Descoberta, por avaliar</option>
+            <option value="evaluating">Em avaliação</option>
+            <option value="manual">Importação manual</option>
+            <option value="semiautomatic">Semiautomática</option>
+            <option value="no-coverage">Sem cobertura confirmada</option>
+            <option value="unavailable">Temporariamente inacessível</option>
+            <option value="unsupported">Não suportada</option>
+          </select></label
+        ><label
+          >Notas e limitações<textarea
+            id="source-notes"
+            rows="3"
+          ></textarea></label
+        ><label class="check"
+          ><input id="source-enabled" type="checkbox" checked /> Fonte ativa no
+          catálogo</label
+        >
+        <details>
+          <summary>Configurar recolha autorizada (avançado)</summary>
+          <p class="muted">
+            Só ative após avaliar as condições e confirmar o direito de recolha.
+            robots.txt não substitui autorização. Um conector configurado ainda
+            precisa de validação com páginas reais.
+          </p>
+          <label
+            >Método<select id="source-method">
+              <option value="manual">Só importação manual</option>
+              <option value="jsonld">Dados estruturados JSON-LD</option>
+              <option value="html">HTML com seletores específicos</option>
+              <option value="rss">Feed RSS/Atom</option>
+            </select></label
+          ><label
+            >URL das condições / autorização<input
+              id="source-terms"
+              type="url" /></label
+          ><label
+            >Base de autorização documentada<textarea
+              id="source-permission"
+              rows="2"
+            ></textarea></label
+          ><label class="check"
+            ><input id="source-allowed" type="checkbox" /> Confirmei que esta
+            recolha é permitida</label
+          ><label
+            >Máximo de páginas por atualização<input
+              id="source-pages"
+              type="number"
+              min="1"
+              max="20"
+              value="3" /></label
+          ><label
+            >Atualização da zona ativa enquanto a aplicação está aberta
+            (minutos; 0 desativa)<input
+              id="source-interval"
+              type="number"
+              min="0"
+              max="10080"
+              value="0" /></label
+          ><label class="check"
+            ><input id="source-exhaustive" type="checkbox" /> Verifiquei que a
+            pesquisa e paginação representam uma listagem completa
+            comparável</label
+          ><label
+            >Negócio da pesquisa (se confirmado)<select id="source-transaction">
+              <option value="">Desconhecido</option>
+              <option value="sale">Venda</option>
+              <option value="rent">Arrendamento</option>
+            </select></label
+          ><label
+            >Moeda confirmada<select id="source-currency">
+              <option value="">Não especificada</option>
+              <option value="EUR">EUR</option>
+            </select></label
+          ><label
+            >Tipo da área extraída<select id="source-area-type">
+              <option value="unknown">Não identificado</option>
+              <option value="usable">Útil</option>
+              <option value="gross">Bruta</option>
+              <option value="land">Terreno</option>
+            </select></label
+          ><label
+            >Seletores HTML (JSON; necessários só no modo HTML)<textarea
+              id="source-selectors"
+              rows="4"
+              placeholder='{"item":"article","title":"h2","url":"a","price":".price","next":"a[rel=next]"}'
+            ></textarea>
+          </label>
+        </details>
+        <p id="source-error" role="alert"></p>
+        <button class="primary">Guardar fonte</button>
+        <button type="button" id="close-source">Cancelar</button>
+      </form>
+    </dialog>
+    <script src="../shared/geography.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
