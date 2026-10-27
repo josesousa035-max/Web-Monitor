@@ -32,3 +32,15 @@
 5. Medir desempenho desktop e preparar instaladores testados/assinados conforme recursos.
 
 A migração do projeto ZIP/store.json histórico depende dos ficheiros originais, ainda ausentes. Não há promessa de cobertura total, extração universal ou monitorização depois de encerrar a aplicação.
+
+## Entrega 0.3 — 27 de outubro de 2026
+
+- [x] Prompt de execução e critérios guardados em docs/prompts/NEXT_STEPS_v0.3.md.
+- [x] Revisão antes de gravar, cancelamento, confirmação parcial, prazo e revisão obsoleta.
+- [x] Preservação de dados ausentes, datas e agrupamentos área/tipo e preço/moeda.
+- [x] Diagnóstico local por fonte/zona, sem presumir conectividade.
+- [x] Reutilização do cliente de rede, paginação RSS e exclusão de contradições.
+- [x] Preview interativa dentro do ZIP e relatórios de testes preparados para CI.
+- [ ] Obter resultados remotos da CI: API recusou acesso nesta sessão; consultar Actions na conta GitHub.
+- [ ] Concluir investigação externa e validação real de fontes quando o acesso permitir.
+- [ ] Executar e validar desktop/instaladores Windows e macOS com sandbox e sessão gráfica adequadas.

@@ -427,3 +427,26 @@ summary {
   flex: 1;
   min-width: 0;
 }
+#import-review {
+  width: 900px;
+}
+#review-samples {
+  display: grid;
+  gap: 12px;
+  max-height: 36vh;
+  overflow: auto;
+  margin: 18px 0;
+}
+#review-summary .stat {
+  padding: 12px;
+}
+#review-summary .stat strong {
+  font-size: 24px;
+}
+#review-error {
+  color: #ffb7a9;
+}
+#diagnostics-content {
+  display: grid;
+  gap: 14px;
+}

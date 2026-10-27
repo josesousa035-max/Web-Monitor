@@ -11,7 +11,15 @@ function buildPreview() {
     "\n.preview-banner{background:#28483f;color:#b9f8df;border:1px solid #507c6c;border-radius:9px;padding:14px 18px;font-size:12px;line-height:1.7;margin-bottom:28px}.local{white-space:pre-line}@media(max-width:750px){body{display:block}aside{position:static;width:100%;padding:18px}nav{display:flex;flex-wrap:wrap;margin-top:12px;gap:2px}.local,aside>p{display:none}main{margin:0;width:100%;padding:20px}header{display:block}header .primary{margin-top:10px}.stats{grid-template-columns:repeat(2,1fr)}.toolbar{flex-wrap:wrap}.toolbar input,.toolbar select{flex:1 1 40%}.cards{grid-template-columns:1fr}.search-rule{grid-template-columns:1fr}}";
   const { initialSources, PILOT_ZONE } = require("../src/core/catalog.cjs");
   const bridge = read("src/preview/bridge.js")
-    .replace("/*CATALOG_DATA*/ []", JSON.stringify(initialSources()))
+    .replace(
+      "/*CATALOG_DATA*/ []",
+      JSON.stringify(
+        initialSources().map((source) => ({
+          ...source,
+          updatedAt: "2026-10-27T12:00:00Z",
+        })),
+      ),
+    )
     .replace("/*ZONE_DATA*/ []", JSON.stringify([PILOT_ZONE]));
   const app = read("src/ui/app.js"),
     geo = read("src/shared/geography.js");
@@ -38,5 +46,14 @@ function buildPreview() {
   fs.writeFileSync(output, html);
   return output;
 }
-if (require.main === module) console.log(buildPreview());
+if (require.main === module) {
+  const output = buildPreview();
+  console.log(output);
+  if (process.argv.includes("--share")) {
+    const destination = path.join(root, "preview", "Web-Monitor.html");
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.copyFileSync(output, destination);
+    console.log(destination);
+  }
+}
 module.exports = { buildPreview };

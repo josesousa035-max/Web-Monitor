@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 — revisão de importações e conservação de dados
+
+- Prompt de execução guardada em docs/prompts/NEXT_STEPS_v0.3.md.
+- Rever, cancelar e confirmar importações, com sessão temporária, deteção de revisão obsoleta e backup só na confirmação.
+- Campos ausentes não apagam valores conhecidos; datas inválidas, área/tipo e preço/moeda tratados conservadoramente.
+- Avisos HTML/EML conservados e confirmação explícita de parcialidade; referências contraditórias excluídas.
+- RSS com paginação e reutilização do cliente de rede entre atualizações.
+- Diagnóstico local por fonte/zona, sem pedidos de rede ou mensagens brutas sensíveis.
+- Backup JSON v3, compatível com leitura de v1/v2; preservação de datas por campo e campos conservados.
+- Preview interativa incluída no repositório/ZIP; relatórios JUnit e artefactos de validação preparados na CI.
+- Acesso à API GitHub/Overpass e arranque Electron continuam sujeitos às limitações descritas no relatório.
+
 ## 0.2.0 — zonas e catálogo extensível
 
 - Fontes por domínio e pesquisas por zona, sem limite às três imobiliárias iniciais.

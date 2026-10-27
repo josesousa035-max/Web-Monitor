@@ -1,8 +1,24 @@
 const { parse } = require("csv-parse/sync");
 const cheerio = require("cheerio");
 const { simpleParser } = require("mailparser");
+const { observedFields, reconcileRows } = require("./observations.cjs");
 const { normalize } = require("./store.cjs");
 const { initialSources, belongs } = require("./catalog.cjs");
+function normalizeExtracted(raw, catalog) {
+  let fields = observedFields(raw);
+  const pricePresent = raw.originalPrice !== undefined;
+  fields = fields.filter(
+    (field) =>
+      !(
+        ["priceCents", "originalPrice", "originalCurrency"].includes(field) &&
+        !pricePresent
+      ) &&
+      !(field === "area" && raw.area == null) &&
+      !(field === "areaType" && raw.area == null) &&
+      !(field === "coordinates" && raw.coordinates == null),
+  );
+  return normalize({ ...raw, observedFields: fields }, catalog);
+}
 function structured(html, source, catalog, baseUrl) {
   const $ = cheerio.load(html);
   const nodes = [];
@@ -88,7 +104,7 @@ function structured(html, source, catalog, baseUrl) {
           precision: "approximate",
         };
       rows.push(
-        normalize(
+        normalizeExtracted(
           {
             source,
             publishedAt:
@@ -182,7 +198,7 @@ function selectorRows(html, source, catalog, baseUrl) {
       const rawPrice = value(item, "price");
       const area = value(item, "area");
       listings.push(
-        normalize(
+        normalizeExtracted(
           {
             source,
             url,
@@ -192,6 +208,8 @@ function selectorRows(html, source, catalog, baseUrl) {
             location: value(item, "location"),
             municipality: value(item, "municipality"),
             price: rawPrice || null,
+            originalPrice: rawPrice || undefined,
+            originalCurrency: rawPrice ? "EUR" : undefined,
             area: area ? area.replace(/\s*m[²2]\s*$/i, "") : null,
             areaType: entry.connector.areaType || "unknown",
             typology: value(item, "typology"),
@@ -227,7 +245,7 @@ function rssRows(xml, source, catalog, baseUrl) {
       const currency = item.find("price").first().attr("currency");
       const address = item.find("location").first().text();
       listings.push(
-        normalize(
+        normalizeExtracted(
           {
             source,
             url: new URL(url, baseUrl).href,
@@ -238,6 +256,8 @@ function rssRows(xml, source, catalog, baseUrl) {
               .text(),
             location: address,
             price: rawPrice && currency === "EUR" ? rawPrice : null,
+            originalPrice: rawPrice || undefined,
+            originalCurrency: currency || undefined,
             provenance: {
               method: "rss",
               url: baseUrl,
@@ -253,18 +273,20 @@ function rssRows(xml, source, catalog, baseUrl) {
     }
   });
   if (!listings.length) throw Error("Feed sem anúncios reconhecidos");
-  return { listings, warnings, nextUrls: [], explicitEmpty: false };
+  return { listings, warnings, $ };
 }
 function parseDocument(html, source, catalog = initialSources(), baseUrl) {
   const entry = catalog.find((s) => s.id === source);
   if (!entry) throw Error("Fonte não registada");
-  if (entry.method === "rss")
-    return rssRows(html, source, catalog, baseUrl || entry.homepage);
   const result =
-    entry.method === "html"
-      ? selectorRows(html, source, catalog, baseUrl || entry.homepage)
-      : structured(html, source, catalog, baseUrl);
-  const selector = entry.connector?.selectors?.next || 'a[rel="next"]';
+    entry.method === "rss"
+      ? rssRows(html, source, catalog, baseUrl || entry.homepage)
+      : entry.method === "html"
+        ? selectorRows(html, source, catalog, baseUrl || entry.homepage)
+        : structured(html, source, catalog, baseUrl);
+  const selector =
+    entry.connector?.selectors?.next ||
+    (entry.method === "rss" ? '[rel="next"]' : 'a[rel="next"]');
   const nextUrls = [];
   result.$(selector).each((_, element) => {
     const href = result.$(element).attr("href");
@@ -284,15 +306,19 @@ function parseDocument(html, source, catalog = initialSources(), baseUrl) {
     throw Error(
       "Formato não reconhecido: não foram encontrados anúncios suportados. Use JSON/CSV ou reveja o conector.",
     );
-  const unique = new Map();
+  const unique = new Map(),
+    conflicted = new Set();
   for (const row of result.listings) {
-    if (
-      unique.has(row.key) &&
-      JSON.stringify({ ...unique.get(row.key), provenance: null }) !==
-        JSON.stringify({ ...row, provenance: null })
-    )
-      result.warnings.push("Referência repetida com dados diferentes");
-    else unique.set(row.key, row);
+    if (conflicted.has(row.key)) continue;
+    const previous = unique.get(row.key);
+    const combined = previous ? reconcileRows(previous, row) : row;
+    if (!combined) {
+      unique.delete(row.key);
+      conflicted.add(row.key);
+      result.warnings.push(
+        "Referência contraditória excluída: " + row.reference,
+      );
+    } else unique.set(row.key, combined);
   }
   return {
     listings: [...unique.values()],
@@ -304,7 +330,7 @@ function parseDocument(html, source, catalog = initialSources(), baseUrl) {
 function htmlListings(html, source, catalog = initialSources(), baseUrl) {
   return parseDocument(html, source, catalog, baseUrl).listings;
 }
-async function readImport(
+async function readImportResult(
   buffer,
   extension,
   source,
@@ -312,7 +338,7 @@ async function readImport(
 ) {
   if (buffer.length > 10 * 1024 * 1024)
     throw Error("Limite de importação: 10 MB");
-  const content = buffer.toString("utf8");
+  const content = buffer.toString("utf8").replace(/^\uFEFF/, "");
   let rows;
   if (extension === ".json") {
     const data = JSON.parse(content);
@@ -324,7 +350,7 @@ async function readImport(
   } else if (extension === ".csv")
     rows = parse(content, { columns: true, skip_empty_lines: true, bom: true });
   else if ([".html", ".htm"].includes(extension))
-    return htmlListings(content, source, catalog);
+    return documentImport(content, source, catalog);
   else if (extension === ".eml") {
     const mail = await simpleParser(buffer, {
       skipHtmlToText: true,
@@ -332,21 +358,41 @@ async function readImport(
     });
     if (!mail.html)
       throw Error("E-mail sem HTML estruturado suportado. Use JSON/CSV.");
-    return htmlListings(mail.html, source, catalog);
+    return documentImport(mail.html, source, catalog);
   } else throw Error("Formato não suportado");
   if (!Array.isArray(rows)) throw Error("É necessária uma lista de anúncios");
-  return rows.map((x) =>
-    normalize(
-      {
-        ...x,
-        source: x.source || source,
-        provenance: {
-          method: extension.slice(1),
-          collectedAt: new Date().toISOString(),
+  return {
+    warnings: [],
+    partial: false,
+    rows: rows.map((x) =>
+      normalize(
+        {
+          ...x,
+          source: x.source || source,
+          provenance: {
+            method: extension.slice(1),
+            collectedAt: new Date().toISOString(),
+          },
         },
-      },
-      catalog,
+        catalog,
+      ),
     ),
-  );
+  };
 }
-module.exports = { readImport, htmlListings, parseDocument };
+function documentImport(content, source, catalog) {
+  const result = parseDocument(content, source, catalog);
+  return {
+    rows: result.listings,
+    warnings: result.warnings,
+    partial: result.warnings.length > 0,
+  };
+}
+async function readImport(...args) {
+  const result = await readImportResult(...args);
+  if (result.partial)
+    throw Error(
+      "Importação parcial: use a revisão e confirme os avisos antes de gravar",
+    );
+  return result.rows;
+}
+module.exports = { readImport, readImportResult, htmlListings, parseDocument };

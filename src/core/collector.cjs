@@ -3,6 +3,7 @@ const robotsParser = require("robots-parser");
 const { SafeClient, USER_AGENT } = require("./network.cjs");
 const { parseDocument } = require("./importers.cjs");
 const { belongs } = require("./catalog.cjs");
+const { reconcileRows } = require("./observations.cjs");
 const { importCollection } = require("./service.cjs");
 const running = new Set();
 const defaultClient = new SafeClient();
@@ -69,7 +70,8 @@ async function collect(
     }
     const queue = [source.searchUrl],
       visited = new Set(),
-      unique = new Map();
+      unique = new Map(),
+      conflicted = new Set();
     const maxPages = source.connector.maxPages || 3;
     while (queue.length && run.pages < maxPages) {
       if (signal?.aborted)
@@ -103,15 +105,16 @@ async function collect(
       run.pages++;
       run.warnings.push(...page.warnings);
       for (const row of page.listings) {
+        if (conflicted.has(row.key)) continue;
         const old = unique.get(row.key);
-        if (
-          old &&
-          (old.priceCents !== row.priceCents || old.title !== row.title)
-        )
+        const combined = old ? reconcileRows(old, row) : row;
+        if (!combined) {
+          unique.delete(row.key);
+          conflicted.add(row.key);
           run.warnings.push(
-            "Referência contraditória entre páginas: " + row.reference,
+            "Referência contraditória excluída entre páginas: " + row.reference,
           );
-        else unique.set(row.key, row);
+        } else unique.set(row.key, combined);
       }
       for (const next of page.nextUrls) {
         if (visited.has(next)) run.warnings.push("Ciclo de paginação detetado");
@@ -187,7 +190,7 @@ async function updateSource(
   sourceId,
   zoneId,
   {
-    client = new SafeClient(),
+    client = defaultClient,
     signal,
     now,
     config = {},

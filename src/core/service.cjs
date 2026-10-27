@@ -4,7 +4,9 @@ function importCollection(store, rows, config, now) {
     const before = new Map(store.list().map((x) => [x.key, x]));
     const summary = store.import(rows, now);
     const existing = JSON.parse(store.getMeta("alerts") || "[]");
-    const importedKeys = new Set(rows.map((r) => r.key));
+    const importedKeys = new Set(
+      store.prepareImport(rows, now).map((r) => r.next.key),
+    );
     const alerts = evaluate(
       before,
       store.list().filter((x) => importedKeys.has(x.key)),

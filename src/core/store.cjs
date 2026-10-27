@@ -3,6 +3,7 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const initSqlJs = require("sql.js");
 const { initialSources, publicUrl, belongs } = require("./catalog.cjs");
+const { observedFields, planImport } = require("./observations.cjs");
 const SOURCES = ["idealista", "remax", "boulder"];
 function money(value) {
   if (
@@ -79,6 +80,15 @@ function normalize(x, catalog = initialSources()) {
   const areaType = x.areaType || "unknown";
   if (!["usable", "gross", "land", "unknown"].includes(areaType))
     throw Error("Tipo de área inválido");
+  const provided = observedFields(x);
+  if (provided.includes("areaType") && !provided.includes("area"))
+    throw Error("Para alterar o tipo de área, forneça também a área observada");
+  if (
+    (provided.includes("originalPrice") ||
+      provided.includes("originalCurrency")) &&
+    !provided.includes("priceCents")
+  )
+    throw Error("Preço original e moeda exigem uma observação de preço");
   const isoDate = (value) => {
     if (value == null || value === "") return null;
     if (
@@ -87,9 +97,20 @@ function normalize(x, catalog = initialSources()) {
       !Number.isFinite(Date.parse(value))
     )
       return null;
+    if (
+      new Date(value.slice(0, 10) + "T00:00:00Z").toISOString().slice(0, 10) !==
+      value.slice(0, 10)
+    )
+      return null;
     return value;
   };
+  for (const field of ["publishedAt", "sourceUpdatedAt"])
+    if (x[field] != null && isoDate(x[field]) === null) {
+      const index = provided.indexOf(field);
+      if (index >= 0) provided.splice(index, 1);
+    }
   return {
+    observedFields: provided,
     canonicalUrl:
       x.canonicalUrl && belongs(x.canonicalUrl, entry.domain)
         ? safeUrl(x.canonicalUrl)
@@ -207,87 +228,50 @@ class Store {
   history(key) {
     return this.rows("SELECT * FROM history WHERE key=? ORDER BY id", [key]);
   }
+  prepareImport(items, now = new Date().toISOString()) {
+    return planImport(this, items, now);
+  }
   import(items, now = new Date().toISOString()) {
-    if (!Array.isArray(items) || items.length > 50000)
-      throw Error("Lista inválida ou demasiado grande");
-    const catalog = this.sources();
-    const data = items.map((x) => normalize(x, catalog));
-    const unique = new Map();
-    for (const x of data) {
-      if (
-        unique.has(x.key) &&
-        JSON.stringify({ ...unique.get(x.key), provenance: null }) !==
-          JSON.stringify({ ...x, provenance: null })
-      )
-        throw Error("Referências repetidas com dados contraditórios");
-      unique.set(x.key, x);
-    }
+    const entries = this.prepareImport(items, now);
     let added = 0,
       changed = 0;
     return this.transaction(() => {
-      for (const x of unique.values()) {
-        const oldRow = this.rows("SELECT data FROM listings WHERE key=?", [
-          x.key,
-        ])[0];
-        const old = oldRow ? JSON.parse(oldRow.data) : null;
-        if (!old) added++;
-        if (old && old.priceCents !== x.priceCents) changed++;
-        if (!old || old.priceCents !== x.priceCents)
+      for (const entry of entries) {
+        const { previous, next, changes } = entry;
+        if (!previous) added++;
+        if (previous && previous.priceCents !== next.priceCents) changed++;
+        if (!previous || previous.priceCents !== next.priceCents)
           this.db.run(
             "INSERT INTO history (key,old_price,new_price,date) VALUES (?,?,?,?)",
-            [x.key, old?.priceCents ?? null, x.priceCents, now],
+            [next.key, previous?.priceCents ?? null, next.priceCents, now],
           );
-        if (old)
-          for (const field of [
-            "title",
-            "description",
-            "location",
-            "area",
-            "typology",
-            "propertyType",
-            "url",
-            "areaType",
-            "transaction",
-            "municipality",
-          ]) {
-            if (old[field] !== x[field])
-              this.db.run(
-                "INSERT INTO changes (key,field,old_value,new_value,date) VALUES (?,?,?,?,?)",
-                [
-                  x.key,
-                  field,
-                  JSON.stringify(old[field] ?? null),
-                  JSON.stringify(x[field] ?? null),
-                  now,
-                ],
-              );
-          }
-        const next = {
-          ...x,
-          firstSeen: old?.firstSeen || now,
-          lastSeen: now,
-          status: "active",
-          previousPriceCents:
-            old && old.priceCents !== x.priceCents
-              ? old.priceCents
-              : (old?.previousPriceCents ?? null),
-        };
+        for (const change of changes.filter((x) => x.field !== "priceCents"))
+          this.db.run(
+            "INSERT INTO changes (key,field,old_value,new_value,date) VALUES (?,?,?,?,?)",
+            [
+              next.key,
+              change.field,
+              JSON.stringify(change.before),
+              JSON.stringify(change.after),
+              now,
+            ],
+          );
         this.db.run("INSERT OR REPLACE INTO listings VALUES (?,?)", [
-          x.key,
+          next.key,
           JSON.stringify(next),
         ]);
       }
       this.db.run(
         "INSERT INTO imports (date,count,added,changed) VALUES (?,?,?,?)",
-        [now, unique.size, added, changed],
+        [now, entries.length, added, changed],
       );
-      return { count: unique.size, added, changed };
+      return { count: entries.length, added, changed };
     });
   }
   export() {
     return {
       format: "web-monitor",
-      version: 2,
+      version: 3,
       sources: this.sources(),
       zones: this.zones(),
       runs: this.rows("SELECT data FROM runs ORDER BY rowid").map((x) =>
@@ -306,7 +290,7 @@ class Store {
   restore(data) {
     if (
       data.format !== "web-monitor" ||
-      ![1, 2].includes(data.version) ||
+      ![1, 2, 3].includes(data.version) ||
       !Array.isArray(data.listings) ||
       !Array.isArray(data.history) ||
       !Array.isArray(data.imports) ||
@@ -315,16 +299,16 @@ class Store {
       throw Error("Backup incompatível");
     const { sourceInput, zoneInput } = require("./catalog.cjs");
     if (
-      data.version === 2 &&
+      data.version >= 2 &&
       (!Array.isArray(data.sources) ||
         !Array.isArray(data.zones) ||
         !Array.isArray(data.runs) ||
         !Array.isArray(data.associations) ||
         !Array.isArray(data.observations))
     )
-      throw Error("Estrutura de backup v2 inválida");
+      throw Error("Estrutura de backup inválida");
     const catalog =
-      data.version === 2
+      data.version >= 2
         ? data.sources.map((x) =>
             sourceInput(
               {
@@ -342,8 +326,10 @@ class Store {
       new Set(catalog.map((x) => x.domain)).size !== catalog.length
     )
       throw Error("Fontes duplicadas no backup");
-    const zones = data.version === 2 ? data.zones.map(zoneInput) : this.zones();
-    const normalized = data.listings.map((x) => normalize(x, catalog));
+    const zones = data.version >= 2 ? data.zones.map(zoneInput) : this.zones();
+    const normalized = data.listings.map((x) =>
+      normalize({ ...x, observedFields: undefined }, catalog),
+    );
     if (new Set(normalized.map((x) => x.key)).size !== normalized.length)
       throw Error("Backup com duplicados");
     const keys = new Set(normalized.map((x) => x.key));
@@ -368,6 +354,13 @@ class Store {
       if (
         !keys.has(c.key) ||
         ![
+          "canonicalUrl",
+          "publishedAt",
+          "sourceUpdatedAt",
+          "originalPrice",
+          "originalCurrency",
+          "country",
+          "coordinates",
           "title",
           "description",
           "location",
@@ -387,7 +380,8 @@ class Store {
         if (
           parsed !== null &&
           typeof parsed !== "string" &&
-          typeof parsed !== "number"
+          typeof parsed !== "number" &&
+          !(c.field === "coordinates" && typeof parsed === "object")
         )
           throw Error("Valor de alteração inválido");
       }
@@ -453,7 +447,11 @@ class Store {
       data.listings.forEach((x, i) =>
         this.db.run("INSERT INTO listings VALUES (?,?)", [
           normalized[i].key,
-          JSON.stringify({ ...x, ...normalized[i] }),
+          JSON.stringify({
+            ...x,
+            ...normalized[i],
+            observedFields: x.observedFields || normalized[i].observedFields,
+          }),
         ]),
       );
       data.history.forEach((h) =>

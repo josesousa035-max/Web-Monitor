@@ -10,9 +10,13 @@ const currency = (cents) =>
     : new Intl.NumberFormat("pt-PT", {
         style: "currency",
         currency: "EUR",
-        maximumFractionDigits: 0,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
       }).format(cents / 100);
-const date = (value) => new Date(value).toLocaleString("pt-PT");
+const date = (value) =>
+  value && Number.isFinite(Date.parse(value))
+    ? new Date(value).toLocaleString("pt-PT")
+    : "Data não disponível";
 let state;
 let activeZoneId = null;
 const updating = new Set();
@@ -52,7 +56,14 @@ function change(x) {
     : 0;
 }
 function view(name) {
-  for (const id of ["dashboard", "zones", "sources", "alerts", "settings"])
+  for (const id of [
+    "dashboard",
+    "zones",
+    "sources",
+    "alerts",
+    "settings",
+    "diagnostics",
+  ])
     $(id).hidden = id !== name;
   document
     .querySelectorAll("nav button")
@@ -88,6 +99,8 @@ async function load() {
   render();
   renderSettings();
   renderZones();
+  if (!$("diagnostics").hidden && window.monitor.diagnostics)
+    await refreshDiagnostics();
 }
 function selectedZone() {
   return (state.zones || []).find((z) => z.id === activeZoneId);
@@ -502,18 +515,119 @@ async function detail(x) {
         ),
       );
   }
+  if (x.preservedFields?.length)
+    content.append(
+      el(
+        "p",
+        "Alguns campos foram conservados de observações anteriores e não foram confirmados na última importação.",
+        "status-note",
+      ),
+    );
   $("detail").showModal();
 }
+let pendingReview = null;
 async function importSource(source) {
-  const result = await call("import", source);
-  if (result) {
-    await load();
-    message(
-      `Importação concluída: ${result.count} anúncios, ${result.added} novos e ${result.changed} alterações de preço.`,
-    );
-    view("dashboard");
-  }
+  const result = await call("prepareImport", source);
+  if (!result) return;
+  pendingReview = result;
+  showImportReview(result);
 }
+function showImportReview(review) {
+  $("review-label").textContent =
+    review.label + " · Rever até " + date(review.expiresAt);
+  $("review-error").textContent = "";
+  $("review-summary").replaceChildren();
+  for (const [label, value] of [
+    ["Anúncios", review.summary.total],
+    ["Novos", review.summary.newListings],
+    ["Alterações de preço", review.summary.priceChanges],
+    ["Dados conservados", review.summary.preservedListings],
+  ]) {
+    const card = el("div", null, "stat");
+    card.append(el("span", label), el("strong", String(value)));
+    $("review-summary").append(card);
+  }
+  $("review-warnings").replaceChildren(
+    ...review.warnings.map((w) => el("p", w, "status-note")),
+  );
+  if (review.summary.unknownPrices)
+    $("review-warnings").append(
+      el(
+        "p",
+        review.summary.unknownPrices + " anúncios com preço desconhecido.",
+        "status-note",
+      ),
+    );
+  $("review-samples").replaceChildren(
+    el(
+      "p",
+      "Amostra de até " +
+        review.sampleLimit +
+        " anúncios. Os totais incluem o ficheiro completo.",
+      "muted",
+    ),
+  );
+  for (const sample of review.samples) {
+    const card = el("article", null, "card");
+    card.append(
+      el("h3", sample.title),
+      el(
+        "p",
+        sourceLabel(sample.source) +
+          " · " +
+          (sample.isNew ? "Novo anúncio" : "Anúncio conhecido") +
+          " · " +
+          currency(sample.priceCents),
+        "muted",
+      ),
+    );
+    if (sample.preservedFields.length)
+      card.append(
+        el(
+          "p",
+          sample.preservedFields.length +
+            " campos anteriores conservados; não foram novamente confirmados neste ficheiro.",
+          "status-note",
+        ),
+      );
+    for (const change of sample.changes) {
+      const value = (field, v) =>
+        field === "priceCents"
+          ? v === null
+            ? "Desconhecido"
+            : currency(v)
+          : v === null || v === ""
+            ? "Desconhecido"
+            : typeof v === "object"
+              ? JSON.stringify(v)
+              : String(v);
+      card.append(
+        el(
+          "p",
+          change.label +
+            ": " +
+            value(change.field, change.before) +
+            " → " +
+            value(change.field, change.after),
+          "metadata",
+        ),
+      );
+    }
+    $("review-samples").append(card);
+  }
+  $("review-partial-label").hidden = !review.partial;
+  $("review-partial").checked = false;
+  $("confirm-import").disabled = review.partial;
+  if (!$("import-review").open) $("import-review").showModal();
+}
+async function cancelReview() {
+  const token = pendingReview?.token;
+  pendingReview = null;
+  $("import-review").close();
+  if (token) await call("cancelImport", token);
+  message("Importação cancelada. Os dados não foram alterados.");
+}
+
 document
   .querySelectorAll("nav button")
   .forEach((b) => (b.onclick = () => view(b.dataset.view)));
@@ -1046,4 +1160,129 @@ $("discover-osm").onclick = task(async () => {
   message(
     "Pesquisa concluída. Os sites candidatos ainda precisam de avaliação; cobertura comercial não confirmada.",
   );
+});
+
+$("review-partial").onchange = () => {
+  $("confirm-import").disabled =
+    !!pendingReview?.partial && !$("review-partial").checked;
+};
+$("confirm-import").onclick = async () => {
+  if (!pendingReview) return;
+  $("confirm-import").disabled = true;
+  try {
+    const summary = await call("confirmImport", pendingReview.token, {
+      acceptPartial: $("review-partial").checked,
+    });
+    pendingReview = null;
+    $("import-review").close();
+    await load();
+    message(
+      "Importação confirmada: " +
+        summary.count +
+        " anúncios, " +
+        summary.added +
+        " novos e " +
+        summary.changed +
+        " alterações de preço.",
+    );
+    view("dashboard");
+  } catch (error) {
+    $("review-error").textContent = error.message;
+  } finally {
+    $("confirm-import").disabled =
+      !!pendingReview?.partial && !$("review-partial").checked;
+  }
+};
+$("cancel-import").onclick = task(cancelReview);
+$("import-review").addEventListener("cancel", (event) => {
+  event.preventDefault();
+  cancelReview().catch((e) => message(e.message, true));
+});
+$("import-review").addEventListener("close", () => {
+  if (pendingReview) {
+    const token = pendingReview.token;
+    pendingReview = null;
+    call("cancelImport", token).catch((e) => message(e.message, true));
+  }
+});
+async function refreshDiagnostics() {
+  const zone = selectedZone() || state.zones?.[0];
+  if (!zone) {
+    $("diagnostics-content").replaceChildren(
+      el("p", "Crie uma zona para consultar o diagnóstico.", "muted"),
+    );
+    return;
+  }
+  const report = await call("diagnostics", zone.id);
+  const content = $("diagnostics-content");
+  content.replaceChildren(
+    el("p", report.note, "muted"),
+    el(
+      "p",
+      "Versão " +
+        report.appVersion +
+        " · Base de dados " +
+        (report.demonstration
+          ? "demonstração, sem verificação SQLite"
+          : report.storage.integrity === "ok"
+            ? "verificada"
+            : "com problema") +
+        " · " +
+        report.storage.listings +
+        " anúncios · " +
+        report.storage.priceEvents +
+        " observações de preço",
+      "card",
+    ),
+  );
+  const statuses = {
+    ready: "Configurada · acesso por testar",
+    manual: "Importação manual",
+    disabled: "Desativada",
+    "needs-search": "Pesquisa em falta",
+    "needs-permission": "Autorização por confirmar",
+    "last-attempt-failed": "Última tentativa falhada",
+  };
+  for (const source of report.sources) {
+    const card = el("article", null, "card");
+    card.append(
+      el("h3", source.name),
+      el("span", statuses[source.status] || source.status, "tag"),
+      el("p", source.action, "muted"),
+      el(
+        "p",
+        "Pesquisa: " +
+          (source.checks.queryConfigured ? "configurada" : "em falta") +
+          " · Autorização: " +
+          (source.checks.permissionDocumented
+            ? "documentada"
+            : "por confirmar") +
+          " · Programação: " +
+          (source.scheduleMinutes
+            ? source.scheduleMinutes + " min enquanto a aplicação está ativa"
+            : "desativada"),
+        "metadata",
+      ),
+    );
+    if (source.lastAttempt)
+      card.append(
+        el(
+          "p",
+          "Última tentativa: " +
+            date(source.lastAttempt.date) +
+            " · " +
+            source.lastAttempt.status +
+            (source.lastAttempt.httpStatus
+              ? " · HTTP " + source.lastAttempt.httpStatus
+              : ""),
+          "metadata",
+        ),
+      );
+    content.append(card);
+  }
+}
+$("refresh-diagnostics").onclick = task(refreshDiagnostics);
+document.querySelector('[data-view="diagnostics"]').onclick = task(async () => {
+  view("diagnostics");
+  await refreshDiagnostics();
 });

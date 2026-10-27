@@ -1,6 +1,6 @@
 {
   "name": "web-monitor",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Monitor imobiliário local e privado",
   "author": "Web Monitor",
   "license": "UNLICENSED",
@@ -14,7 +14,9 @@
     "dist": "electron-builder",
     "test:desktop": "electron tests/desktop-smoke.cjs",
     "postinstall": "node node_modules/electron/install.js",
-    "preview": "node scripts/build-preview.cjs"
+    "preview": "node scripts/build-preview.cjs",
+    "preview:share": "node scripts/build-preview.cjs --share",
+    "test:report": "node scripts/test-report.cjs"
   },
   "dependencies": {
     "cheerio": "1.0.0",

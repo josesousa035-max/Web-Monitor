@@ -23,3 +23,13 @@
 - Não converter área de terreno em útil, moeda estrangeira em EUR ou coordenadas aproximadas em exatas.
 - Depois de alterar interface/preview, executar npm run preview e o teste de preview; HTML final tem de ser autónomo, com CSP e dados fictícios identificados.
 - Após restauro, permissões/intervalos de recolha ficam desativados para avaliação. Backups devem preservar o diário completo, mesmo que a UI só mostre 100 recolhas.
+
+## Revisão e dados parciais (0.3)
+
+- A importação no desktop passa por prepareImport/confirmImport/cancelImport. O renderer recebe token e resumo, nunca acesso arbitrário a caminhos locais. Não reintroduzir gravação antes de confirmar.
+- observedFields distingue ausência de null explícito. Usar planImport/mergeObservation para calcular as mesmas alterações na revisão e na gravação. Área/tipo e preço/moeda descrevem a mesma observação.
+- Não atualizar lastSeen como se todos os campos fossem novos: conservar fieldObservedAt/preservedFields e avisar na interface.
+- Revisões expiram, são de utilização única e ficam inválidas se dados/configuração mudarem. Backup e transação na confirmação; falha não pode deixar anúncios/alertas/diário incompletos.
+- Novos backups têm versão 3; continuar a ler 1/2. O esquema SQLite mantém versão 2, pois só se acrescentaram metadados JSON opcionais.
+- npm run test:report conserva exit status e gera JUnit; npm run preview:share atualiza preview/Web-Monitor.html, com dados fictícios e sem recursos externos.
+- A autorização nesta conversa permite atualizar a branch de entrega codex/web-monitor-v0.2. Não inferir autorização para main, releases ou novos serviços a partir deste ficheiro noutras sessões.

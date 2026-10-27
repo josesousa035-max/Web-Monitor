@@ -53,3 +53,9 @@ O catálogo deixou de ser uma lista fixa: fontes são persistidas por domínio, 
 Novos módulos: catalog.cjs/catalog-store.cjs (modelo e persistência), discovery.cjs (plano e candidatos), osm-discovery.cjs (fornecedor público opcional), network.cjs (rede validada), collector.cjs (recolha e política de ausências), shared/geography.js (geografia partilhada com a interface). O núcleo anterior e a arquitetura Electron/sql.js foram preservados.
 
 O renderer continua sem rede/Node/fs. Métodos IPC específicos validam fontes/zonas e usam o processo principal. Recolhas autorizadas suportam cancelamento, cache e periodicidade enquanto o processo está ativo. Fonte descoberta, configurada e validada são estados distintos. Consulte DATA_MODEL.md e CONNECTOR_GUIDE.md para contratos e limites.
+
+## Evolução 0.3
+
+`observations.cjs` centraliza presença, combinação conservadora e diferenças. `import-session.cjs` mantém uma revisão efémera de uso único com prazo e impressão digital do estado; só a confirmação grava com backup/transação. `diagnostics.cjs` produz um diagnóstico local reduzido, sem rede ou mensagens sensíveis. Nenhum serviço remoto, framework ou dependência foi acrescentado.
+
+A preview inclui demonstração de revisão/cancelamento/confirmação e pode ser descarregada dentro do ZIP em preview/Web-Monitor.html. O fluxo IPC de importação passou a prepareImport/confirmImport/cancelImport. O esquema SQLite permanece v2, e o backup exportado passa a JSON v3, com leitor de v1/v2. Consulte IMPORT_WORKFLOW.md e a prompt executada.

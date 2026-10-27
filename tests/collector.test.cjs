@@ -236,3 +236,50 @@ test("preço estrangeiro é preservado na origem sem conversão e datas explíci
   assert.equal(result.listings[0].publishedAt, "2026-01-01");
   assert.equal(result.exhaustive, false);
 });
+
+test("referência com área contraditória entre páginas é excluída sem atualizar o imóvel", async () => {
+  const source = sourceInput(input);
+  const store = await Store.open();
+  store.saveSource(input);
+  await updateSource(store, input.id, PILOT_ZONE.id, {
+    client: client({ "https://example.org/houses": page("1") }),
+  });
+  const first = page("1", '<a rel="next" href="/page2">Seguinte</a>');
+  const second = page("1", "", { floorSize: { value: 500, unitCode: "MTK" } });
+  const result = await updateSource(store, input.id, PILOT_ZONE.id, {
+    client: client({
+      "https://example.org/houses": first,
+      "https://example.org/page2": second,
+    }),
+  });
+  assert.equal(result.run.status, "partial");
+  assert.equal(result.run.items, 0);
+  assert.equal(store.list()[0].area, 120);
+  assert.equal(store.list()[0].status, "active");
+  assert.equal(store.history(input.id + ":1").length, 1);
+  store.close();
+});
+
+test("RSS percorre next e não aceita referências contraditórias como recolha completa", async () => {
+  const feed = (price, next = "") =>
+    "<rss><channel>" +
+    next +
+    '<item><title>SINTÉTICO</title><link>https://example.org/1</link><guid>1</guid><price currency="EUR">' +
+    price +
+    "</price></item></channel></rss>";
+  const result = await collect(
+    sourceInput({ ...input, method: "rss" }),
+    PILOT_ZONE,
+    client({
+      "https://example.org/houses": feed(
+        100000,
+        '<link rel="next" href="/page2"/>',
+      ),
+      "https://example.org/page2": feed(110000),
+    }),
+  );
+  assert.equal(result.pages, 2);
+  assert.equal(result.status, "partial");
+  assert.equal(result.items, 0);
+  assert.match(result.warnings.join(" "), /contraditória/);
+});

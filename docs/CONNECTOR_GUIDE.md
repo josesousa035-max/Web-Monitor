@@ -65,3 +65,9 @@ A interface permite avaliação e semiautomatização. Nesta entrega não existe
 `discovery.cjs` gera um plano de pesquisa e importa referências autorizadas. Termos e localidade ajudam a ordenar candidatos; não confirmam cobertura. Nenhum site descoberto é visitado ou autorizado automaticamente.
 
 Use `npm test`. Os testes de transporte local exigem OpenSSL; quando indisponível, esse teste é explicitamente ignorado pelo runner. `npm run test:desktop` exige sessão gráfica e sandbox utilizável, e não é substituído pelos testes DOM.
+
+## Atualização 0.3: observações e revisão
+
+Os parsers conservam presença dos campos: falta de preço/área não equivale a um null explícito num ficheiro normalizado. readImportResult devolve dados/avisos para revisão e readImport recusa parcialidade por omissão. A interface usa prepareImport/confirmImport/cancelImport; o helper de extração de HTML não deve ser usado para gravar diretamente na base.
+
+JSON-LD/HTML/RSS reconciliam dados complementares da mesma referência e excluem referências contraditórias. RSS também segue next dentro do domínio. O cliente SafeClient é reutilizado entre atualizações, conservando cache/intervalos. Os testes continuam a usar exemplos locais; estas alterações não validam qualquer portal real.

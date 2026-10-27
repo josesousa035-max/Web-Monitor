@@ -3,7 +3,10 @@ const api = {};
 for (const method of [
   "list",
   "history",
-  "import",
+  "prepareImport",
+  "confirmImport",
+  "cancelImport",
+  "diagnostics",
   "settings",
   "open",
   "export",

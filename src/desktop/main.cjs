@@ -10,8 +10,9 @@ const path = require("node:path");
 const fs = require("node:fs");
 const { Store, safeUrl } = require("../core/store.cjs");
 const { duplicates, validateSettings } = require("../core/rules.cjs");
-const { readImport } = require("../core/importers.cjs");
-const { importCollection } = require("../core/service.cjs");
+const { readImportResult } = require("../core/importers.cjs");
+const { ImportSession } = require("../core/import-session.cjs");
+const { diagnostics } = require("../core/diagnostics.cjs");
 const { plan, candidates } = require("../core/discovery.cjs");
 const { updateSource } = require("../core/collector.cjs");
 const controllers = new Map();
@@ -101,7 +102,12 @@ app
         ),
       };
     });
-    handle("import", async (source) => {
+    const imports = new ImportSession(store, {
+      config: settings,
+      beforeCommit: () =>
+        store.backup(path.join(app.getPath("userData"), "backups")),
+    });
+    handle("prepareImport", async (source) => {
       store.source(source);
       const result = await dialog.showOpenDialog({
         properties: ["openFile"],
@@ -115,52 +121,32 @@ app
       if (result.canceled) return null;
       const file = result.filePaths[0];
       if (fs.statSync(file).size > 10 * 1024 * 1024)
-        throw Error("Ficheiro demasiado grande");
-      const rows = await readImport(
+        throw Error("Limite de importação: 10 MB");
+      const parsed = await readImportResult(
         fs.readFileSync(file),
         path.extname(file).toLowerCase(),
         source,
         store.sources(),
       );
-      store.backup(path.join(app.getPath("userData"), "backups"));
-      const config = settings();
-      const { summary, alerts } = store.transaction(() => {
-        const result = importCollection(store, rows, config);
-        const date = new Date().toISOString();
-        const run = {
-          id: require("node:crypto").randomUUID(),
-          sourceId: source,
-          zoneId: null,
-          startedAt: date,
-          finishedAt: date,
-          status: "partial",
-          method: "manual",
-          exhaustive: false,
-          pages: 0,
-          items: rows.length,
-          warnings: ["Importação manual: ausências não verificadas"],
-          error: null,
-        };
-        store.saveRun(run);
-        store.sourceResult(source, {
-          status: "partial",
-          date,
-          items: rows.length,
-        });
-        return result;
+      return imports.prepare(parsed.rows, {
+        sourceId: source,
+        label: path.basename(file),
+        warnings: parsed.warnings,
+        partial: parsed.partial,
       });
-      if (config.alerts && alerts.length && Notification.isSupported()) {
-        try {
-          new Notification({
-            title: "Web Monitor",
-            body: alerts.length + " novos alertas. Consulte a aplicação.",
-          }).show();
-        } catch {
-          /* Alerts remain available in the application. */
-        }
-      }
-      return summary;
     });
+    handle("confirmImport", (token, options) => {
+      const result = imports.confirm(token, options);
+      notifyAlerts(result.alerts);
+      return result.summary;
+    });
+    handle("cancelImport", (token) => imports.cancel(token));
+    handle("diagnostics", (zoneId) =>
+      diagnostics(store, zoneId, {
+        appVersion: app.getVersion(),
+        platform: process.platform,
+      }),
+    );
     handle("settings", (value) => {
       store.transaction(() => {
         const next = validateSettings(value, safeUrl, store.sources());

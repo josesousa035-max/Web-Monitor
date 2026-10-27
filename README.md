@@ -2,13 +2,22 @@
 
 Aplicação desktop local para acompanhar anúncios imobiliários. Interface em português de Portugal, modo escuro, dados SQLite no computador e consulta sem Internet.
 
-**Estado: versão de desenvolvimento 0.2.0.** O núcleo e a interface têm testes locais; a execução gráfica e os instaladores Windows/macOS ainda precisam de validação nas plataformas respetivas. Não há conector automático validado para os portais iniciais. Existe um motor de recolha para fontes autorizadas configuradas, validado com exemplos locais.
+**Estado: versão de desenvolvimento 0.3.0.** O núcleo e a interface têm testes locais; a execução gráfica e os instaladores Windows/macOS ainda precisam de validação nas plataformas respetivas. Não há conector automático validado para os portais iniciais. Existe um motor de recolha para fontes autorizadas configuradas, validado com exemplos locais.
 
-## Novidades: pesquisa por localização
+## Novidades da versão 0.3
+
+- **Revisão antes de importar:** veja novos anúncios, alterações, campos conservados e avisos; confirme ou cancele antes de gravar.
+- **Dados parciais seguros:** campos ausentes/vazios conservam informação anterior; null explícito em JSON indica valor desconhecido. Datas inválidas não apagam datas anteriores.
+- **Diagnóstico local:** estado por fonte/zona, ações recomendadas e integridade da base carregada, sem fazer pedidos de rede ou apresentar acesso por testar como validado.
+- **Preview incluída no ZIP:** abra `preview/Web-Monitor.html` no navegador, sem instalar Node/Electron. Todos os dados são fictícios; pode experimentar revisão, cancelamento e confirmação.
+
+A prompt desta etapa está em [docs/prompts/NEXT_STEPS_v0.3.md](docs/prompts/NEXT_STEPS_v0.3.md). Leia [o fluxo de importação](docs/IMPORT_WORKFLOW.md) para conhecer as regras e os limites.
+
+## Pesquisa por localização
 
 A aplicação já não está limitada a três imobiliárias. Em **Zonas de interesse**, crie concelhos/localidades ou centros com raio e guarde os critérios. Em **Fontes**, acrescente qualquer agência ou portal e configure pesquisas próprias para cada zona.
 
-- **OpenStreetMap:** procura agências mapeadas com site, com cache de 24 horas e atribuição. É opcional, requer Internet e não confirma imóveis disponíveis. A chamada real ficou bloqueada com 403 nesta cloud; o processamento foi testado com exemplos sintéticos.
+- **OpenStreetMap:** procura agências mapeadas com site, com cache de 24 horas e atribuição. É opcional, requer Internet e não confirma imóveis disponíveis. A descoberta real continua sem validação nesta cloud; o processamento foi testado com exemplos sintéticos e as falhas de acesso estão no relatório.
 - **Pesquisa assistida:** prepara consultas por localização para abrir no navegador. Não executa pesquisas web silenciosas.
 - **Referências importadas:** acrescenta candidatos de JSON/CSV/HTML que tenha direito a processar.
 - **Recolha configurável:** JSON-LD, HTML por seletores e RSS/Atom, sempre após autorização documentada. Estado, avisos, completude e falhas são visíveis. Nenhuma fonte descoberta é ativada automaticamente.
@@ -32,18 +41,19 @@ Windows x64 e macOS Apple Silicon são os alvos de distribuição. Neste ambient
 ## Começar a utilizar
 
 1. Abra **Fontes e importação** e escolha a fonte do ficheiro.
-2. Importe JSON ou CSV no formato abaixo. Fontes indicadas em cada registo prevalecem sobre a seleção.
-3. Consulte os cartões, filtre os resultados e abra **Ver imóvel e histórico**.
-4. Importe novamente o mesmo ficheiro: os anúncios conhecidos não são criados outra vez.
-5. Altere um preço no ficheiro e reimporte: o histórico regista a alteração.
-6. Em **Configurações**, ajuste URLs, regras de alerta e pesquisas guardadas.
-7. Use **Exportar backup** para guardar anúncios, histórico, alertas e configurações. **Restaurar backup** substitui os dados atuais após confirmação e backup preventivo.
+2. Selecione JSON/CSV ou outro formato suportado. Fontes indicadas em cada registo prevalecem sobre a seleção.
+3. Reveja a amostra, totais e avisos. Só **Confirmar importação** grava dados; cancelar mantém a base. Se o ficheiro for parcial, é necessário aceitar explicitamente os avisos.
+4. Consulte os cartões, filtre os resultados e abra **Ver imóvel e histórico**.
+5. Importe novamente o mesmo ficheiro: os anúncios conhecidos não são criados outra vez.
+6. Altere um preço no ficheiro e reimporte: o histórico regista a alteração.
+7. Em **Configurações**, ajuste URLs, regras de alerta e pesquisas guardadas.
+8. Use **Exportar backup** para guardar anúncios, histórico, alertas e configurações. **Restaurar backup** substitui os dados atuais após confirmação e backup preventivo.
 
 Os exemplos em `tests/fixtures/` são **sintéticos e não representam anúncios reais**. A aplicação começa vazia e não os carrega automaticamente. Para experimentar, importe `tests/fixtures/listings.synthetic.json` numa instalação de teste. Use outro perfil do sistema operativo para manter demonstrações separadas de dados reais; não misture os ficheiros de exemplo com a sua base de produção.
 
 ### JSON de importação
 
-O preço é expresso em euros; em alternativa, use `priceCents` inteiro. `null` significa desconhecido. Referência e título são obrigatórios, e o URL deve pertencer à fonte.
+O preço é expresso em euros; em alternativa, use `priceCents` inteiro. `null` explícito significa desconhecido e pode substituir um valor anterior. Omitir um campo ou deixá-lo vazio conserva o valor conhecido. Referência e título são obrigatórios, e o URL deve pertencer à fonte.
 
 ```json
 [
@@ -76,7 +86,7 @@ O backup JSON versionado **não é** uma recolha. Use a ação de restauro para 
 - **Idealista:** pesquisa inicial configurada; JSON/CSV disponíveis. Importação de alertas reais não validada.
 - **Boulder:** URL inicial conserva os filtros fornecidos; JSON/CSV disponíveis. HTML real não validado.
 - **RE/MAX:** URL por configurar pelo utilizador; JSON/CSV disponíveis.
-- **HTML/EML:** suporte genérico e limitado a anúncios em JSON-LD com tipo, título, URL e oferta/preço reconhecidos. Não é um extrator universal nem um conector validado de e-mails Idealista. Formatos não reconhecidos são rejeitados.
+- **HTML/EML:** suporte genérico e limitado a anúncios em JSON-LD com tipo, título e URL reconhecidos; preços só quando existirem dados monetários suportados. Não é um extrator universal nem um conector validado de e-mails Idealista. Formatos não reconhecidos são rejeitados.
 
 As fontes iniciais não têm automatização ativada. Não há contorno de bloqueios, consulta de caixas de e-mail ou pedidos de credenciais. Nenhuma ausência num ficheiro importado altera o estado de anúncios conhecidos. Apenas recolhas completas e comparáveis podem aplicar a política conservadora de indisponibilidade. Consulte [docs/SOURCES.md](docs/SOURCES.md).
 
@@ -94,6 +104,7 @@ Contém `monitor.sqlite`, `backups/` e `diagnostics.log`. Não altere a base man
 
 ```sh
 npm test
+npm run test:report
 npm run benchmark
 npm run test:desktop
 npm run build
@@ -123,3 +134,5 @@ Leia [arquitetura](docs/ARCHITECTURE.md), [resultados dos testes](docs/TEST_REPO
 Execute `npm run preview` para gerar `dist/preview.html`. Abra esse ficheiro num navegador: contém a mesma interface, estilos e lógica visual da aplicação desktop, com um adaptador de demonstração e 12 anúncios inteiramente fictícios. Não requer servidor ou Internet.
 
 Pode explorar filtros, ordenação, detalhes, histórico e configurações. Os ajustes de configurações duram apenas enquanto a página estiver aberta. Não há acesso à base real, importação/restauro, notificações ou recolha. A exportação contém apenas exemplos identificados como fictícios e não é um backup da aplicação. A preview não valida a integração desktop.
+
+Os novos backups usam o formato JSON v3; a versão 0.3 também lê v1/v2. Não se deve restaurar um backup novo numa aplicação antiga. O esquema SQLite continua v2, com metadados opcionais nos registos JSON. `npm run preview:share` atualiza a preview incluída no ZIP.

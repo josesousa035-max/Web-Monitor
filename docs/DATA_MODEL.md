@@ -40,3 +40,9 @@ Política: primeira ausência mantém ativo; pelo menos duas recolhas completas 
 ## Descoberta OSM
 
 Retém apenas identificadores, nome/categoria, site e evidência necessários. Telefones/e-mails e outros tags desnecessários são filtrados antes da cache persistente. Cache de 24 horas. Dados de descoberta mantêm atribuição ODbL e não constituem anúncios. Uma área administrativa inexistente ou ambígua produz erro, não uma conclusão falsa de zero agências.
+
+## Atualização 0.3
+
+As tabelas mantêm esquema v2. Registos acrescentam observedFields (presença semântica), fieldObservedAt (data por campo) e preservedFields (campos conservados). A importação usa o mesmo cálculo de alterações na revisão e na gravação; campos ausentes não apagam dados. Novos eventos de metadados podem incluir publicação, atualização, moeda original, país ou coordenadas.
+
+O formato de backup passa a JSON v3 para identificar essa evolução; o leitor 0.3 continua compatível com JSON v1/v2. Reveja IMPORT_WORKFLOW.md. As descrições anteriores do formato v2 referem-se à versão 0.2.

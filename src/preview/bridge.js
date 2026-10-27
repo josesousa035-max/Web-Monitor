@@ -1,10 +1,14 @@
 // Browser-only demonstration adapter. No real listings, filesystem access or network.
 (() => {
-  const now = "2026-10-26T12:00:00Z";
+  const now = "2026-10-27T12:00:00Z";
   const sourceIds = ["idealista", "boulder", "remax"];
   let catalog = /*CATALOG_DATA*/ [];
   let zones = /*ZONE_DATA*/ [];
   let associations = [];
+  let stagedImport = null;
+  let revision = 0;
+  let demoImportId = 0;
+  const demoHistory = new Map();
   let activeZoneId = "povoa-de-lanhoso";
   const examples = [
     ["Moradia T3 com jardim", "Póvoa de Lanhoso", 225000, 245000, 180, "T3"],
@@ -95,16 +99,14 @@
     ],
   };
   const imports = [{ date: now, count: 12, added: 3, changed: 6 }];
-  const alerts = listings
-    .slice(0, 4)
-    .map((x, i) => ({
-      id: `demo-alert-${i}`,
-      key: x.key,
-      title: x.title,
-      reason: i % 2 ? "new" : "drop",
-      date: now,
-      priceCents: x.priceCents,
-    }));
+  const alerts = listings.slice(0, 4).map((x, i) => ({
+    id: `demo-alert-${i}`,
+    key: x.key,
+    title: x.title,
+    reason: i % 2 ? "new" : "drop",
+    date: now,
+    priceCents: x.priceCents,
+  }));
   const ok = (data) => ({ ok: true, data });
   window.monitor = {
     list: async () =>
@@ -123,7 +125,7 @@
       const x = listings.find((x) => x.key === key);
       if (!x) return { ok: false, error: "Exemplo não encontrado" };
       return ok({
-        history: [
+        history: demoHistory.get(key) || [
           {
             date: "2026-09-01T10:00:00Z",
             old_price: null,
@@ -150,6 +152,7 @@
         if (catalog.some((x) => x.id !== value.id && x.domain === domain))
           throw Error("Este domínio já existe no catálogo");
         const row = { ...value, domain, lastResult: null };
+        revision++;
         catalog = [...catalog.filter((x) => x.id !== row.id), row];
         settings.urls[row.id] = row.searchUrl;
         return ok(row);
@@ -158,6 +161,7 @@
       }
     },
     selectZone: async (id) => {
+      revision++;
       activeZoneId = id;
       return ok(true);
     },
@@ -171,6 +175,7 @@
           ok: false,
           error: "Defina o nome, concelho e os parâmetros geográficos",
         };
+      revision++;
       zones = [...zones.filter((x) => x.id !== value.id), value];
       activeZoneId = value.id;
       return ok(value);
@@ -218,6 +223,7 @@
       return ok(true);
     },
     settings: async (value) => {
+      revision++;
       settings = JSON.parse(JSON.stringify(value));
       return ok(true);
     },
@@ -225,10 +231,175 @@
       ok: false,
       error: "Demonstração: não existe um anúncio real para abrir.",
     }),
-    import: async () => ({
-      ok: false,
-      error: "A importação de ficheiros está disponível na aplicação desktop.",
-    }),
+    prepareImport: async (source) => {
+      const known = listings.find((x) => x.source === source);
+      const id = "DEMO-IMPORT-" + ++demoImportId;
+      const added = {
+        ...listings[0],
+        key: source + ":" + id,
+        source,
+        reference: id,
+        title: "DEMONSTRAÇÃO — Novo imóvel importado",
+        priceCents: 17200000,
+        previousPriceCents: null,
+        firstSeen: now,
+        lastSeen: now,
+        description: "Dados fictícios da demonstração de importação.",
+      };
+      const samples = [];
+      if (known)
+        samples.push({
+          key: known.key,
+          title: known.title,
+          source,
+          location: known.location,
+          priceCents: known.priceCents - 500000,
+          isNew: false,
+          preservedFields: ["description", "area", "location"],
+          changes: [
+            {
+              field: "priceCents",
+              label: "Preço",
+              before: known.priceCents,
+              after: known.priceCents - 500000,
+            },
+          ],
+        });
+      samples.push({
+        key: added.key,
+        title: added.title,
+        source,
+        location: added.location,
+        priceCents: added.priceCents,
+        isNew: true,
+        preservedFields: [],
+        changes: [],
+      });
+      const review = {
+        token: crypto.randomUUID(),
+        label: "DEMONSTRAÇÃO — ficheiro fictício.json",
+        expiresAt: new Date(Date.now() + 900000).toISOString(),
+        partial: true,
+        warnings: [
+          "Exemplo fictício: uma linha inválida foi excluída. Na aplicação real, só os anúncios válidos serão importados após confirmação.",
+        ],
+        sampleLimit: 40,
+        summary: {
+          total: samples.length,
+          newListings: 1,
+          knownListings: known ? 1 : 0,
+          priceChanges: known ? 1 : 0,
+          metadataChanges: 0,
+          unchanged: 0,
+          unknownPrices: 0,
+          preservedListings: known ? 1 : 0,
+        },
+        samples,
+      };
+      stagedImport = { review, revision, knownKey: known?.key, added };
+      return ok(JSON.parse(JSON.stringify(review)));
+    },
+    confirmImport: async (token, options = {}) => {
+      if (!stagedImport || stagedImport.review.token !== token)
+        return { ok: false, error: "Revisão inexistente ou já confirmada." };
+      if (stagedImport.revision !== revision) {
+        stagedImport = null;
+        return { ok: false, error: "Os dados mudaram. Reveja novamente." };
+      }
+      if (!options.acceptPartial)
+        return {
+          ok: false,
+          error: "Confirme os avisos da importação parcial.",
+        };
+      const staged = stagedImport;
+      stagedImport = null;
+      const known = listings.find((x) => x.key === staged.knownKey);
+      if (known) {
+        const old = known.priceCents;
+        known.previousPriceCents = old;
+        known.priceCents = old - 500000;
+        known.preservedFields = ["description", "area", "location"];
+        known.lastSeen = now;
+        demoHistory.set(known.key, [
+          { date: "2026-10-01T10:00:00Z", old_price: null, new_price: old },
+          { date: now, old_price: old, new_price: known.priceCents },
+        ]);
+        alerts.unshift({
+          id: "demo-drop-" + staged.added.key,
+          key: known.key,
+          title: known.title,
+          reason: "drop",
+          date: now,
+          priceCents: known.priceCents,
+        });
+      }
+      listings.push(staged.added);
+      demoHistory.set(staged.added.key, [
+        { date: now, old_price: null, new_price: staged.added.priceCents },
+      ]);
+      alerts.unshift({
+        id: "demo-new-" + staged.added.key,
+        key: staged.added.key,
+        title: staged.added.title,
+        reason: "new",
+        date: now,
+        priceCents: staged.added.priceCents,
+      });
+      const summary = {
+        count: staged.review.summary.total,
+        added: 1,
+        changed: known ? 1 : 0,
+      };
+      imports.unshift({ date: now, ...summary });
+      revision++;
+      return ok(summary);
+    },
+    cancelImport: async (token) => {
+      if (stagedImport?.review.token === token) stagedImport = null;
+      return ok(true);
+    },
+    diagnostics: async (zoneId) => {
+      const zone = zones.find((x) => x.id === zoneId);
+      if (!zone) return { ok: false, error: "Zona não encontrada" };
+      return ok({
+        demonstration: true,
+        generatedAt: now,
+        appVersion: "0.3.0 (DEMO)",
+        platform: "browser",
+        zone,
+        networkVerified: false,
+        note: "Demonstração do diagnóstico. Não há pedidos de rede, verificação de SQLite ou anúncios reais nesta preview.",
+        storage: {
+          schema: "2",
+          integrity: "demo",
+          listings: listings.length,
+          priceEvents: listings.length * 3,
+        },
+        sources: catalog.map((source) => ({
+          id: source.id,
+          name: source.name,
+          status:
+            source.enabled === false
+              ? "disabled"
+              : source.method === "manual"
+                ? "manual"
+                : source.permission?.allowed
+                  ? "ready"
+                  : "needs-permission",
+          checks: {
+            queryConfigured: !!(source.searches?.[zoneId] || source.searchUrl),
+            permissionDocumented: !!source.permission?.allowed,
+            enabled: source.enabled !== false,
+            methodConfigured: source.method !== "manual",
+          },
+          scheduleMinutes: source.intervalMinutes || 0,
+          lastAttempt: null,
+          networkVerified: false,
+          action:
+            "Dados demonstrativos. Avalie a fonte na aplicação desktop antes de recolher.",
+        })),
+      });
+    },
     restore: async () => ({
       ok: false,
       error: "O restauro de dados está disponível na aplicação desktop.",

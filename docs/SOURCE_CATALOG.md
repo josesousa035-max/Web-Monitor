@@ -45,3 +45,9 @@ O catálogo começa apenas com as três fontes conhecidas. Não foi preenchido c
 ## Continuação da investigação
 
 Quando existir acesso: repetir os pedidos bloqueados; examinar resultados por localidade e fontes independentes; verificar sites oficiais e cobertura em anúncios atuais; registar condições e meios permitidos; só então configurar e validar conectores com exemplos representativos. Pesquisas adicionais devem parar quando deixarem de acrescentar fontes úteis, sem transformar uma meta de quantidade em integrações superficiais.
+
+## Revalidação — 27 de outubro de 2026
+
+A consulta documentada Overpass foi novamente tentada com identificação WebMonitor e Accept application/json: resposta HTTP 406. A leitura da API GitHub Actions recebeu 403, tanto por pedido HTTP como pela CLI já configurada. Não se inferiu falta de token nem se pediu outra credencial; o acesso Git nativo ao repositório continuou a funcionar.
+
+Não foram contornadas as recusas nem foram declaradas novas agências/conectores validados. A versão 0.3 concentra o avanço independente no fluxo local de importação e diagnóstico. Os estados e restrições das fontes anteriores mantêm-se até nova verificação real.

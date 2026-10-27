@@ -19,6 +19,7 @@
         ><button data-view="zones">◎ &nbsp; Zonas de interesse</button
         ><button data-view="sources">⇄ &nbsp; Fontes e importação</button
         ><button data-view="alerts">♧ &nbsp; Alertas</button
+        ><button data-view="diagnostics">◉ &nbsp; Diagnóstico</button
         ><button data-view="settings">⚙ &nbsp; Configurações</button>
       </nav>
       <div class="local">
@@ -189,7 +190,40 @@
         <button id="export">Exportar backup</button>
         <button id="restore">Restaurar backup…</button>
       </section>
+      <section id="diagnostics" hidden>
+        <div class="section-title">
+          <h2>Estado do Web Monitor</h2>
+          <button id="refresh-diagnostics">Atualizar diagnóstico local</button>
+        </div>
+        <p class="muted">
+          Esta verificação não faz pedidos de rede. Mostra a configuração e as
+          tentativas anteriores, sem confirmar que os sites estão acessíveis
+          agora.
+        </p>
+        <div id="diagnostics-content"></div>
+      </section>
     </main>
+    <dialog id="import-review" aria-labelledby="review-title">
+      <h2 id="review-title">Rever antes de importar</h2>
+      <p id="review-label" class="muted"></p>
+      <div id="review-summary" class="stats"></div>
+      <div id="review-warnings"></div>
+      <p class="muted">
+        Campos não fornecidos preservam informação anterior. Os campos
+        conservados podem ser mais antigos do que esta importação. Nenhuma
+        ausência neste ficheiro marca anúncios como removidos.
+      </p>
+      <div id="review-samples"></div>
+      <label id="review-partial-label" class="check" hidden
+        ><input type="checkbox" id="review-partial" /> Compreendo os avisos e
+        quero importar apenas os anúncios válidos desta recolha parcial</label
+      >
+      <p id="review-error" role="alert"></p>
+      <div class="source-actions">
+        <button id="confirm-import" class="primary">Confirmar importação</button
+        ><button id="cancel-import">Cancelar</button>
+      </div>
+    </dialog>
     <dialog id="detail">
       <button id="close-detail" class="close" aria-label="Fechar">✕</button>
       <div id="detail-content"></div>
