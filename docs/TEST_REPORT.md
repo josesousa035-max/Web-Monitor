@@ -1,5 +1,13 @@
 # Relatório de validação — 0.3.1
 
+## Correção do verificador ASAR Windows — 28/10/2026
+
+Log fornecido: verify:win falha em extractFile para `src/core/catalog-store.cjs`. Antes de alterar, 69 testes locais aprovados. A biblioteca @electron/asar 3.4.1 divide diretórios por path.sep; o verificador convertia os caminhos relativos Windows para `/`, impedindo a procura de entradas aninhadas. A correção conserva o caminho nativo, mantendo a comparação integral dos bytes.
+
+Novo teste cria um ASAR sintético real e executa o verificador com a implementação instalada de procura ASAR, usando semântica path.win32 e path.posix. Reproduziu exatamente a mensagem de ficheiro ausente antes da correção; passou depois. Também confirma rejeição de bytes diferentes e ficheiros realmente ausentes. A simulação de caminhos não constitui execução nativa Windows.
+
+`npm run test:report`: **70 aprovados, 0 falhados, 0 ignorados**, ~2,14 s. `node scripts/verify-windows.cjs --portable`: aprovado no pacote Windows local existente, com 21 fontes, PE x64 e WASM iguais; hash do portable mantém-se `fafa745099c81c40e8859bf51f51ca19ed6d2e4ac4c92704751af754a061e339`. `git diff --check` aprovado. Não houve alterações ao runtime da aplicação ou dados, nem necessidade de repetir o build. Aguarda-se resultado da nova CI nativa; não se declara sucesso remoto ou instalador validado.
+
 ## Correção da falha Windows comunicada pelo utilizador — 28/10/2026
 
 O log fornecido mostra falha da asserção CSP em tests/preview.test.cjs:29 no runner Windows. Antes de alterar, os 68 testes locais passaram. Uma cópia temporária das fontes com terminações CRLF reproduziu a mesma divergência: o gerador calculava o hash com CRLF, enquanto o parser HTML normalizava para LF. Isso também podia impedir a execução da preview num navegador com CSP aplicada.

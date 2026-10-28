@@ -2,6 +2,8 @@
 
 ## 0.3.1 — 28 de outubro de 2026
 
+- Corrigido verify:win: consultas ASAR usam separadores nativos, sem converter caminhos Windows em POSIX. Regressão reproduz a falha com a implementação ASAR instalada, verifica POSIX/Windows e mantém rejeição de fontes alteradas/ausentes. 70 testes locais aprovados.
+
 - Corrigida falha CSP da preview em checkout Windows: normalizar CRLF/CR para LF antes de calcular hashes e incorporar scripts/estilos. Teste de regressão reproduziu a falha e verifica HTML idêntico entre terminações de linha; 69 testes locais aprovados.
 
 - Empacotamento Windows x64 com instalador NSIS assistido e executável portable, nomes explícitos e preservação de dados na configuração de desinstalação.

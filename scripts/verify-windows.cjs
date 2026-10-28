@@ -50,7 +50,9 @@ assert.equal(bundledPackage.version, pkg.version, "Versão empacotada desatualiz
 assert.equal(bundledPackage.main, pkg.main);
 const sources = files(path.join(root, "src"));
 for (const file of sources) {
-  const relative = path.relative(root, file).split(path.sep).join("/");
+  // ASAR's filesystem splits paths using the host separator (path.sep).
+  // Converting to '/' here prevents nested entries from resolving on Windows.
+  const relative = path.relative(root, file);
   assert.ok(asar.extractFile(archive, relative).equals(fs.readFileSync(file)), "Fonte empacotada diferente: " + relative);
 }
 const wasm = "node_modules/sql.js/dist/sql-wasm.wasm";
