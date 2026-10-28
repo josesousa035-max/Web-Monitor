@@ -16,7 +16,10 @@
     "postinstall": "node node_modules/electron/install.js",
     "preview": "node scripts/build-preview.cjs",
     "preview:share": "node scripts/build-preview.cjs --share",
-    "test:report": "node scripts/test-report.cjs"
+    "test:report": "node scripts/test-report.cjs",
+    "dist:win": "electron-builder --win nsis portable --x64 --publish never && node scripts/verify-windows.cjs",
+    "dist:win:portable": "electron-builder --win portable --x64 --publish never && node scripts/verify-windows.cjs --portable",
+    "verify:win": "node scripts/verify-windows.cjs"
   },
   "dependencies": {
     "cheerio": "1.0.0",
@@ -45,7 +48,23 @@
       "category": "public.app-category.finance"
     },
     "win": {
-      "target": "nsis"
+      "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }]
+    },
+    "nsis": {
+      "artifactName": "Web-Monitor-${version}-windows-${arch}-setup.${ext}",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Web Monitor",
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": ["pt_PT", "en_US"],
+      "runAfterFinish": true
+    },
+    "portable": {
+      "artifactName": "Web-Monitor-${version}-windows-${arch}-portable.${ext}",
+      "requestExecutionLevel": "user"
     },
     "linux": {
       "target": "AppImage"

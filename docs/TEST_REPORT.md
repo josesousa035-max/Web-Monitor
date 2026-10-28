@@ -1,5 +1,22 @@
 # Relatório de validação — 0.3.1
 
+## Empacotamento Windows — 28 de outubro de 2026
+
+Nesta etapa, os **68 testes existentes passaram antes de alterar** a configuração de entrega; repetidos depois, **68 aprovados, 0 falhados, 0 ignorados**, ~3,09 s. Não se alterou código da aplicação, esquema SQLite ou dados. Não foram acrescentadas dependências de runtime.
+
+- Electron 45 Windows x64 descarregado e pasta `dist/win-unpacked` gerada nesta cloud Linux. Verificação estrutural aprovada: PE x64, versão 0.3.1, 21 ficheiros de src iguais à fonte e SQLite WASM igual à dependência instalada. Não é prova de execução Windows.
+- `npm run dist:win:portable` concluído com sucesso: `dist/Web-Monitor-0.3.1-windows-x64-portable.exe`, ~110 MiB. SHA-256 desta geração local: `fafa745099c81c40e8859bf51f51ca19ed6d2e4ac4c92704751af754a061e339`. Stub autoextrator NSIS PE32, contendo a aplicação PE x64 verificada. A CI fará outro build; use os hashes do respetivo artefacto, que podem ser diferentes.
+- Primeira tentativa de instalador NSIS: falhou por falta de Wine (`spawn wine ENOENT`). Segunda, com a ferramenta oficial `toolsets.wine=1.0.1`: download concluído, mas Wine 11 falhou ao carregar ntdll (`c0000135`) antes de concluir o instalador. O setup intermédio não é distribuível nem um instalador validado.
+- Configuração final inclui NSIS assistido e portable, x64, nomes distintos, atalhos, idiomas português/inglês, e desinstalação configurada para conservar dados. A CI Windows nativa gera ambos, verifica os pacotes, calcula SHA-256 e disponibiliza o artefacto **Web-Monitor-Windows-x64**, com instruções. Nada é publicado como release.
+- YAML da CI analisado com js-yaml; sintaxe Node do verificador e `git diff --check` aprovados. O verificador confere estrutura/correspondência do pacote; não testa instalação ou funcionamento.
+- Tentativa atual de ler resultados via `gh run list`: API GitHub recusou acesso (Forbidden). Não se confirmou execução ou sucesso remoto. O download do runtime Windows e das ferramentas de build funcionou; isto não confirma acesso aos portais imobiliários.
+
+O teste Electron em Linux permanece bloqueado pela sandbox conforme execução anterior. Não se executaram os EXE em Windows, nem se testaram instalação, atualização, desinstalação, notificações, reputação SmartScreen ou assinatura. Os executáveis são de desenvolvimento e não assinados. Os dados da edição portable permanecem em APPDATA/web-monitor, partilhados com a edição instalada. Instruções reproduzíveis e checklist manual em [WINDOWS.md](WINDOWS.md).
+
+Reprodução local da edição portable nesta cloud: `XDG_CACHE_HOME=/tmp/web-monitor-cache ELECTRON_CACHE=/tmp/web-monitor-electron ELECTRON_BUILDER_CACHE=/tmp/web-monitor-builder CSC_IDENTITY_AUTO_DISCOVERY=false NODE_USE_ENV_PROXY=1 npm run dist:win:portable`. Verificação posterior: `node scripts/verify-windows.cjs --portable`. O EXE gerado e os pacotes de build permanecem em dist (ignorado por Git); o canal de entrega no browser é o artefacto da CI, não o ZIP do código fonte. A API indisponível impede confirmar que esse download remoto já existe.
+
+## Auditoria e revisão de importação
+
 28 de outubro de 2026, Linux x64, Node v24.19.0. Leitura de AGENTS.md e execução dos **66 testes existentes, todos aprovados, antes de alterar código**. A maior parte da prompt já estava implementada em 0.3.0; esta entrega completa a apresentação da revisão/diagnóstico sem alterar arquitetura nem esquema SQLite.
 
 | Verificação desta execução | Resultado |

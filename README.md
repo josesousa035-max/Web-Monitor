@@ -6,6 +6,12 @@ Aplicação desktop local para acompanhar anúncios imobiliários. Interface em 
 
 A revisão apresenta totais de novos/conhecidos, alterações de preço/metadados e campos desconhecidos no resultado final, com identificação na amostra. O diagnóstico mostra explicitamente o método da fonte. Revalidação de 28/10/2026: 68 testes locais aprovados; acesso à CI/Overpass bloqueado pelo proxy; Electron bloqueado pela sandbox. Consulte [o relatório](docs/TEST_REPORT.md).
 
+## Aplicação Windows
+
+Preparados instalador e executável portable **Windows x64**, com Node/Electron incluídos. Para descarregar, abra [GitHub Actions](https://github.com/josesousa035-max/Web-Monitor/actions/workflows/desktop.yml), selecione a execução da branch de entrega e procure o artefacto **Web-Monitor-Windows-x64** após o job Windows terminar com sucesso. O ZIP do código fonte não inclui EXE. Não há release publicada nem resultado remoto confirmado a partir desta cloud.
+
+O artefacto contém `Web-Monitor-0.3.1-windows-x64-setup.exe`, `Web-Monitor-0.3.1-windows-x64-portable.exe` e hashes SHA-256. A edição não é assinada. Consulte [as instruções Windows](docs/WINDOWS.md) para utilização, dados, build e validação pendente. Para gerar em Windows: `npm ci`, `npm run test:report`, `npm run test:desktop`, `npm run dist:win`, verificando sucesso em cada etapa.
+
 ## Novidades da versão 0.3
 
 - **Revisão antes de importar:** veja novos anúncios, alterações, campos conservados e avisos; confirme ou cancele antes de gravar.

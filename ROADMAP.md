@@ -2,6 +2,10 @@
 
 ## Revalidação 0.3.1 — 28 de outubro de 2026
 
+- [x] Empacotamento Windows x64 configurado: NSIS assistido/portable, verificação estrutural e hashes, artefactos com instruções na CI.
+- [x] EXE portable gerado em Linux e verificado estruturalmente; execução real Windows continua pendente. NSIS local bloqueado pelo runtime Wine; geração nativa preparada na CI.
+- [ ] Confirmar execução remota da CI e instalação/atualização/desinstalação real em Windows; assinar distribuição quando houver certificado autorizado.
+
 - [x] Auditoria e 66 testes anteriores antes de alterar; 68 aprovados após alterações.
 - [x] Totais completos na revisão e identificação de campos desconhecidos na amostra; método explícito no diagnóstico.
 - [x] Rejeição de confirmação após alteração de catálogo verificada sem criar backup.
