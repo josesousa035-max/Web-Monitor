@@ -5,7 +5,9 @@ const root = path.join(__dirname, "..");
 const hash = (value) =>
   `'sha256-${crypto.createHash("sha256").update(value).digest("base64")}'`;
 function buildPreview() {
-  const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
+  // HTML normalizes CRLF/CR to LF before CSP hashing. Normalize before both
+  // hashing and embedding so Windows checkouts produce the same preview.
+  const read = (file) => fs.readFileSync(path.join(root, file), "utf8").replace(/\r\n?/g, "\n");
   const css =
     read("src/ui/style.css") +
     "\n.preview-banner{background:#28483f;color:#b9f8df;border:1px solid #507c6c;border-radius:9px;padding:14px 18px;font-size:12px;line-height:1.7;margin-bottom:28px}.local{white-space:pre-line}@media(max-width:750px){body{display:block}aside{position:static;width:100%;padding:18px}nav{display:flex;flex-wrap:wrap;margin-top:12px;gap:2px}.local,aside>p{display:none}main{margin:0;width:100%;padding:20px}header{display:block}header .primary{margin-top:10px}.stats{grid-template-columns:repeat(2,1fr)}.toolbar{flex-wrap:wrap}.toolbar input,.toolbar select{flex:1 1 40%}.cards{grid-template-columns:1fr}.search-rule{grid-template-columns:1fr}}";

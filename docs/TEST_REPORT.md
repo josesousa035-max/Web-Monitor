@@ -1,5 +1,13 @@
 # Relatório de validação — 0.3.1
 
+## Correção da falha Windows comunicada pelo utilizador — 28/10/2026
+
+O log fornecido mostra falha da asserção CSP em tests/preview.test.cjs:29 no runner Windows. Antes de alterar, os 68 testes locais passaram. Uma cópia temporária das fontes com terminações CRLF reproduziu a mesma divergência: o gerador calculava o hash com CRLF, enquanto o parser HTML normalizava para LF. Isso também podia impedir a execução da preview num navegador com CSP aplicada.
+
+O gerador agora normaliza CRLF e CR para LF antes de calcular hashes e incorporar o conteúdo. A CSP não foi enfraquecida e o teste anterior foi mantido. O teste novo executa o gerador real numa pasta temporária com fontes CRLF e CR, verifica os quatro hashes contra o DOM e compara o HTML com a geração LF. Esse teste falhou antes da correção e passou depois.
+
+`npm run test:report`: **69 aprovados, 0 falhados, 0 ignorados**, ~1,88 s. `npm run preview:share` e `git diff --check` concluídos. A preview gerada em Linux mantém o mesmo conteúdo. Não se alteraram aplicação desktop, dados, dependências ou formato de armazenamento. O empacotamento não foi repetido: esta alteração afeta apenas gerador/testes/documentação. A nova execução nativa da CI continua por confirmar; este resultado local não prova que os passos posteriores do job Windows tenham passado.
+
 ## Empacotamento Windows — 28 de outubro de 2026
 
 Nesta etapa, os **68 testes existentes passaram antes de alterar** a configuração de entrega; repetidos depois, **68 aprovados, 0 falhados, 0 ignorados**, ~3,09 s. Não se alterou código da aplicação, esquema SQLite ou dados. Não foram acrescentadas dependências de runtime.

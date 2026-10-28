@@ -2,8 +2,45 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const crypto = require("node:crypto");
+const path = require("node:path");
+const os = require("node:os");
+const { execFileSync } = require("node:child_process");
 const { JSDOM } = require("jsdom");
 const { buildPreview } = require("../scripts/build-preview.cjs");
+test("preview: hashes CSP correspondem ao DOM com fontes CRLF Windows e CR", (t) => {
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "wm-preview-eol-"));
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const root = path.join(__dirname, "..");
+  const assets = ["src/ui/index.html", "src/ui/style.css", "src/ui/app.js", "src/shared/geography.js", "src/preview/bridge.js"];
+  for (const file of ["scripts/build-preview.cjs", "src/core/catalog.cjs", ...assets]) {
+    const destination = path.join(temporary, file);
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.copyFileSync(path.join(root, file), destination);
+  }
+  const baseline = fs.readFileSync(buildPreview(), "utf8");
+  for (const ending of ["\r\n", "\r"]) {
+    for (const file of assets) {
+      const source = fs.readFileSync(path.join(root, file), "utf8").replace(/\r\n?/g, "\n");
+      fs.writeFileSync(path.join(temporary, file), source.replace(/\n/g, ending));
+    }
+    execFileSync(process.execPath, [path.join(temporary, "scripts/build-preview.cjs")], { stdio: "pipe" });
+    const html = fs.readFileSync(path.join(temporary, "dist/preview.html"), "utf8");
+    const dom = new JSDOM(html); // Parse exactly as HTML, without executing imported scripts.
+    try {
+      const csp = dom.window.document.querySelector('[http-equiv="Content-Security-Policy"]').content;
+      const nodes = dom.window.document.querySelectorAll("script,style");
+      assert.equal(nodes.length, 4);
+      for (const node of nodes) {
+        const hash = crypto.createHash("sha256").update(node.textContent).digest("base64");
+        assert.ok(csp.includes(`'sha256-${hash}'`), `${node.tagName}: CSP diverge após normalização HTML de ${JSON.stringify(ending)}`);
+      }
+      assert.equal(html.includes("\r"), false);
+      assert.equal(html, baseline, "A preview deve ser independente das terminações de linha das fontes");
+    } finally {
+      dom.window.close();
+    }
+  }
+});
 test("preview autónoma: CSP válida, dados fictícios, filtros, histórico e navegação", async () => {
   const html = fs.readFileSync(buildPreview(), "utf8");
   const dom = new JSDOM(html, {

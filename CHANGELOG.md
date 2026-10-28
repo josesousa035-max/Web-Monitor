@@ -2,6 +2,8 @@
 
 ## 0.3.1 — 28 de outubro de 2026
 
+- Corrigida falha CSP da preview em checkout Windows: normalizar CRLF/CR para LF antes de calcular hashes e incorporar scripts/estilos. Teste de regressão reproduziu a falha e verifica HTML idêntico entre terminações de linha; 69 testes locais aprovados.
+
 - Empacotamento Windows x64 com instalador NSIS assistido e executável portable, nomes explícitos e preservação de dados na configuração de desinstalação.
 - Comandos dist:win/dist:win:portable e verificação de PE, versão, fontes no ASAR e SQLite WASM; hashes SHA-256 e instruções incluídos no artefacto Windows da CI, sem publicação de release.
 - CI entrega o artefacto Web-Monitor-Windows-x64 apenas após testes/build/verificação; execução Windows e assinatura continuam por validar.
