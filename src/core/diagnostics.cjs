@@ -97,6 +97,7 @@ function sourceDiagnostic(source, zone, runs) {
     checks,
     action,
     networkVerified: false,
+    method: source.method,
     scheduleMinutes: source.intervalMinutes || 0,
     lastAttempt: last
       ? {
@@ -130,7 +131,7 @@ function sourceDiagnostic(source, zone, runs) {
 function diagnostics(
   store,
   zoneId,
-  { appVersion = "0.3.0", platform = process.platform } = {},
+  { appVersion = "0.3.1", platform = process.platform } = {},
 ) {
   const zone = store.zones().find((x) => x.id === zoneId);
   if (!zone) throw Error("Zona não encontrada");

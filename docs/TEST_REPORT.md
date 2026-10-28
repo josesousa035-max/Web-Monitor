@@ -1,4 +1,25 @@
-# Relatório de validação — 0.3.0
+# Relatório de validação — 0.3.1
+
+28 de outubro de 2026, Linux x64, Node v24.19.0. Leitura de AGENTS.md e execução dos **66 testes existentes, todos aprovados, antes de alterar código**. A maior parte da prompt já estava implementada em 0.3.0; esta entrega completa a apresentação da revisão/diagnóstico sem alterar arquitetura nem esquema SQLite.
+
+| Verificação desta execução | Resultado |
+| --- | --- |
+| `npm run test:report` | **68 aprovados, 0 falhados, 0 ignorados**, ~2,77 s; JUnit com 68 casos e zero falhas |
+| `npm audit --json` | **0 vulnerabilidades**, incluindo desenvolvimento |
+| `npm run preview:share` | HTML autónomo atualizado; CSP e fluxo interativo testados em jsdom |
+| Build Linux com Electron local | Concluído; código atual de sessão, diagnóstico, UI e main/preload verificado no ASAR |
+| `npm run test:desktop` | Código 1/SIGTRAP antes de asserções: sandbox SUID indisponível; não foi desativada |
+| API GitHub Actions e consulta Overpass | Ambos recusados pelo proxy CONNECT com HTTP 403, curl 56/HTTP de origem 000; não se obteve resposta das origens |
+
+Adicionados testes para desconhecidos no resultado final (dados conservados e zero não contam como desconhecidos) e alteração de catálogo após revisão (rejeição sem backup/escrita). Asserções de interface verificam totais de conhecidos/metadados/desconhecidos, nomes de campos e método no diagnóstico. Teste Electron atualizado, mas não executou asserções. A primeira execução do novo teste falhou porque o exemplo enviava tipo de área sem área; corrigiu-se o exemplo para omitir ambos, respeitando a regra existente. Os 66 testes anteriores continuam aprovados.
+
+Auditoria confirmou: revisão pura, sessão temporária/única, fingerprint de dados/catálogo/configuração, limites, backup na confirmação, transação e rollback; avisos parciais conservados, sem inferir remoções; cliente SafeClient partilhado, TLS e validações mantidas. Não se alterou o esquema SQLite 2 nem o backup JSON 3, mantendo leitura 1/2/3. Não houve reset ou migração de dados.
+
+Os resultados remotos da CI continuam desconhecidos. Não foram validados conectores reais ou novas agências. Testes DOM e pacote Linux não validam execução gráfica, instaladores Windows/macOS, assinatura ou notificações. Instruções reproduzíveis abaixo e no README mantidas: `npm ci`, `npm run test:report`, `npm run preview:share`; `XDG_CACHE_HOME=/tmp/web-monitor-cache npm run build -- --config.electronDist=node_modules/electron/dist`. Numa sessão gráfica com sandbox utilizável, executar `npm run test:desktop`.
+
+---
+
+# Histórico — validação 0.3.0
 
 27 de outubro de 2026. Debian 13/Linux x64; Node v24.19.0; Electron 45.0.0. Os 49 testes anteriores foram executados e aprovados antes de alterar o projeto.
 

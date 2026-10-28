@@ -256,6 +256,8 @@
           priceCents: known.priceCents - 500000,
           isNew: false,
           preservedFields: ["description", "area", "location"],
+          unknownFields: ["coordinates"],
+          unknownFieldLabels: ["Coordenadas"],
           changes: [
             {
               field: "priceCents",
@@ -273,6 +275,8 @@
         priceCents: added.priceCents,
         isNew: true,
         preservedFields: [],
+        unknownFields: ["coordinates"],
+        unknownFieldLabels: ["Coordenadas"],
         changes: [],
       });
       const review = {
@@ -292,6 +296,7 @@
           metadataChanges: 0,
           unchanged: 0,
           unknownPrices: 0,
+          unknownFields: samples.length,
           preservedListings: known ? 1 : 0,
         },
         samples,
@@ -364,7 +369,7 @@
       return ok({
         demonstration: true,
         generatedAt: now,
-        appVersion: "0.3.0 (DEMO)",
+        appVersion: "0.3.1 (DEMO)",
         platform: "browser",
         zone,
         networkVerified: false,
@@ -393,6 +398,7 @@
             methodConfigured: source.method !== "manual",
           },
           scheduleMinutes: source.intervalMinutes || 0,
+          method: source.method,
           lastAttempt: null,
           networkVerified: false,
           action:

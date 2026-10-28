@@ -35,3 +35,7 @@ Não faz pedidos de rede, não testa escrita no disco e não transforma configur
 ## Compatibilidade
 
 O esquema de tabelas permanece SQLite v2. Os novos metadados JSON são opcionais, sem reescrever dados antigos. O backup exportado tem versão 3 e conserva esse contexto; a aplicação 0.3 lê formatos 1, 2 e 3. Versões antigas podem não suportar v3, por isso um downgrade exige uma cópia compatível anterior.
+
+## Complemento 0.3.1
+
+A revisão mostra total, novos, conhecidos, alterações de preço e de metadados, campos desconhecidos e dados conservados. O total de campos desconhecidos soma, por anúncio, os campos do modelo observado cujo resultado é null, ausente, vazio ou `unknown`, depois de conservar os dados anteriores; zero não conta como desconhecido. A amostra identifica esses campos em português. Um mesmo anúncio pode ter alterações de preço e de metadados; os totais não são categorias exclusivas. O diagnóstico apresenta o método sem executar a recolha.

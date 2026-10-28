@@ -1,5 +1,9 @@
 const crypto = require("node:crypto");
 const { importCollection } = require("./service.cjs");
+const { FIELDS, LABELS } = require("./observations.cjs");
+const unknownFields = (row) => FIELDS.filter((field) =>
+  row[field] === null || row[field] === undefined || row[field] === "" || row[field] === "unknown",
+);
 function fingerprint(store) {
   const snapshot = store.export();
   delete snapshot.exportedAt;
@@ -19,6 +23,7 @@ function review(entries) {
     metadataChanges: 0,
     unchanged: 0,
     unknownPrices: 0,
+    unknownFields: 0,
     preservedListings: 0,
   };
   for (const entry of entries) {
@@ -30,6 +35,7 @@ function review(entries) {
       summary.metadataChanges++;
     if (entry.previous && !entry.changes.length) summary.unchanged++;
     if (entry.next.priceCents === null) summary.unknownPrices++;
+    summary.unknownFields += unknownFields(entry.next).length;
     if (entry.preservedFields.length) summary.preservedListings++;
   }
   const samples = [...entries]
@@ -47,6 +53,8 @@ function review(entries) {
       priceCents: entry.next.priceCents,
       isNew: !entry.previous,
       preservedFields: entry.preservedFields,
+      unknownFields: unknownFields(entry.next),
+      unknownFieldLabels: unknownFields(entry.next).map((field) => LABELS[field]),
       changes: entry.changes
         .slice(0, 20)
         .map((x) => ({ ...x, before: small(x.before), after: small(x.after) })),

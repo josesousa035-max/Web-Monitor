@@ -2,7 +2,9 @@
 
 Aplicação desktop local para acompanhar anúncios imobiliários. Interface em português de Portugal, modo escuro, dados SQLite no computador e consulta sem Internet.
 
-**Estado: versão de desenvolvimento 0.3.0.** O núcleo e a interface têm testes locais; a execução gráfica e os instaladores Windows/macOS ainda precisam de validação nas plataformas respetivas. Não há conector automático validado para os portais iniciais. Existe um motor de recolha para fontes autorizadas configuradas, validado com exemplos locais.
+**Estado: versão de desenvolvimento 0.3.1.** O núcleo e a interface têm testes locais; a execução gráfica e os instaladores Windows/macOS ainda precisam de validação nas plataformas respetivas. Não há conector automático validado para os portais iniciais. Existe um motor de recolha para fontes autorizadas configuradas, validado com exemplos locais.
+
+A revisão apresenta totais de novos/conhecidos, alterações de preço/metadados e campos desconhecidos no resultado final, com identificação na amostra. O diagnóstico mostra explicitamente o método da fonte. Revalidação de 28/10/2026: 68 testes locais aprovados; acesso à CI/Overpass bloqueado pelo proxy; Electron bloqueado pela sandbox. Consulte [o relatório](docs/TEST_REPORT.md).
 
 ## Novidades da versão 0.3
 

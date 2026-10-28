@@ -140,6 +140,10 @@ test("preview: revisão, cancelamento, confirmação parcial e diagnóstico", as
   await flush();
   assert.equal(d.querySelector("#import-review").open, true);
   assert.equal(d.querySelector("#confirm-import").disabled, true);
+  assert.match(d.querySelector("#review-summary").textContent, /Conhecidos/);
+  assert.match(d.querySelector("#review-summary").textContent, /Alterações de metadados/);
+  assert.match(d.querySelector("#review-summary").textContent, /Campos desconhecidos/);
+  assert.match(d.querySelector("#review-samples").textContent, /Campos desconhecidos após a importação: Coordenadas/);
   assert.match(d.querySelector("#review-samples").textContent, /DEMONSTRAÇÃO/);
   assert.equal((await dom.window.monitor.list()).data.listings.length, 12);
   d.querySelector("#cancel-import").click();
@@ -161,6 +165,7 @@ test("preview: revisão, cancelamento, confirmação parcial e diagnóstico", as
   d.querySelector('[data-view="diagnostics"]').click();
   await flush();
   assert.equal(d.querySelector("#diagnostics").hidden, false);
+  assert.match(d.querySelector("#diagnostics-content").textContent, /Método: manual/);
   assert.match(
     d.querySelector("#diagnostics-content").textContent,
     /sem verificação SQLite/,

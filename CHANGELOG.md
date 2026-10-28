@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 — 28 de outubro de 2026
+
+- Auditoria da implementação existente e 66 testes aprovados antes das alterações; arquitetura, armazenamento e funcionalidades preservados.
+- Revisão com totais visíveis de conhecidos, alterações de metadados e campos desconhecidos; amostra identifica campos desconhecidos no resultado após conservação dos valores anteriores. Zero não é desconhecido.
+- Método explícito no diagnóstico e demonstração autónoma atualizada, sempre fictícia.
+- Testes adicionais para totais/desconhecidos e catálogo alterado após revisão; asserções DOM e teste Electron atualizados.
+- 68 testes locais aprovados e auditoria de dependências sem vulnerabilidades; limitações externas e desktop registadas no relatório.
+
 ## 0.3.0 — revisão de importações e conservação de dados
 
 - Prompt de execução guardada em docs/prompts/NEXT_STEPS_v0.3.md.

@@ -540,7 +540,10 @@ function showImportReview(review) {
   for (const [label, value] of [
     ["Anúncios", review.summary.total],
     ["Novos", review.summary.newListings],
+    ["Conhecidos", review.summary.knownListings],
     ["Alterações de preço", review.summary.priceChanges],
+    ["Alterações de metadados", review.summary.metadataChanges],
+    ["Campos desconhecidos", review.summary.unknownFields],
     ["Dados conservados", review.summary.preservedListings],
   ]) {
     const card = el("div", null, "stat");
@@ -590,6 +593,9 @@ function showImportReview(review) {
           "status-note",
         ),
       );
+    if (sample.unknownFieldLabels?.length)
+      card.append(el("p", "Campos desconhecidos após a importação: " +
+        sample.unknownFieldLabels.join(", "), "status-note"));
     for (const change of sample.changes) {
       const value = (field, v) =>
         field === "priceCents"
@@ -1251,7 +1257,7 @@ async function refreshDiagnostics() {
       el("p", source.action, "muted"),
       el(
         "p",
-        "Pesquisa: " +
+          "Método: " + source.method + " · Pesquisa: " +
           (source.checks.queryConfigured ? "configurada" : "em falta") +
           " · Autorização: " +
           (source.checks.permissionDocumented

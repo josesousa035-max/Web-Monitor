@@ -1,4 +1,15 @@
-# Roadmap — estado da versão 0.2.0
+# Roadmap — estado da versão 0.3.1
+
+## Revalidação 0.3.1 — 28 de outubro de 2026
+
+- [x] Auditoria e 66 testes anteriores antes de alterar; 68 aprovados após alterações.
+- [x] Totais completos na revisão e identificação de campos desconhecidos na amostra; método explícito no diagnóstico.
+- [x] Rejeição de confirmação após alteração de catálogo verificada sem criar backup.
+- [x] Preview autónoma e build Linux atualizados.
+- [ ] CI e descoberta reais: tentativas atuais bloqueadas pelo proxy CONNECT HTTP 403, antes de obter resposta das origens.
+- [ ] Teste Electron atualizado mas bloqueado pela sandbox; Windows/macOS continuam pendentes.
+
+As secções seguintes conservam o histórico das entregas anteriores.
 
 ## Concluído e verificado localmente
 

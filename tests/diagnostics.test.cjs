@@ -10,6 +10,7 @@ test("diagnóstico local verifica armazenamento sem consultar rede ou expor segr
   assert.equal(report.storage.schema, "2");
   assert.equal(report.sources.length, 3);
   assert.equal(report.sources[0].status, "manual");
+  assert.equal(report.sources[0].method, "manual");
   s.saveSource({
     id: "test-agency",
     name: "Teste",
@@ -40,6 +41,7 @@ test("diagnóstico local verifica armazenamento sem consultar rede ou expor segr
   report = diagnostics(s, "povoa-de-lanhoso");
   const source = report.sources.find((x) => x.id === "test-agency");
   assert.equal(source.status, "last-attempt-failed");
+  assert.equal(source.method, "jsonld");
   assert.equal(source.lastAttempt.httpStatus, 403);
   assert.match(source.action, /não contorne/);
   assert.ok(!JSON.stringify(report).includes("SEGREDO"));

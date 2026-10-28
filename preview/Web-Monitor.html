@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'sha256-pNZiry0LoSIHceZaWQFc1tMrnHYYMBekcL5BywB30D8=' 'sha256-qCXh167iSgBzfMcCmktglUyHYf/umX0wQpQLQ3TP9Bk=' 'sha256-2Z0NwG0wuB+bha5anUr6foo2XtANebLOehXGB7kgcfc='; style-src 'sha256-Du64PtapQufH4VlJZbnFr1YUZ4Arm13ZSnqvG0J/fBs='; img-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'"
+      content="default-src 'none'; script-src 'sha256-OyHyMxNwhHed7qvh5fUvXXpL0a+kG6TPF+wcZOsQWjA=' 'sha256-qCXh167iSgBzfMcCmktglUyHYf/umX0wQpQLQ3TP9Bk=' 'sha256-06wb/mdeQAwmCUtPFIkWjFOwfhZGnTB3+hLyRk+qFoE='; style-src 'sha256-Du64PtapQufH4VlJZbnFr1YUZ4Arm13ZSnqvG0J/fBs='; img-src data:; connect-src 'none'; object-src 'none'; base-uri 'none'"
     />
     <title>Web Monitor — demonstração interativa</title>
     <style>:root {
@@ -1142,6 +1142,8 @@ summary {
           priceCents: known.priceCents - 500000,
           isNew: false,
           preservedFields: ["description", "area", "location"],
+          unknownFields: ["coordinates"],
+          unknownFieldLabels: ["Coordenadas"],
           changes: [
             {
               field: "priceCents",
@@ -1159,6 +1161,8 @@ summary {
         priceCents: added.priceCents,
         isNew: true,
         preservedFields: [],
+        unknownFields: ["coordinates"],
+        unknownFieldLabels: ["Coordenadas"],
         changes: [],
       });
       const review = {
@@ -1178,6 +1182,7 @@ summary {
           metadataChanges: 0,
           unchanged: 0,
           unknownPrices: 0,
+          unknownFields: samples.length,
           preservedListings: known ? 1 : 0,
         },
         samples,
@@ -1250,7 +1255,7 @@ summary {
       return ok({
         demonstration: true,
         generatedAt: now,
-        appVersion: "0.3.0 (DEMO)",
+        appVersion: "0.3.1 (DEMO)",
         platform: "browser",
         zone,
         networkVerified: false,
@@ -1279,6 +1284,7 @@ summary {
             methodConfigured: source.method !== "manual",
           },
           scheduleMinutes: source.intervalMinutes || 0,
+          method: source.method,
           lastAttempt: null,
           networkVerified: false,
           action:
@@ -1948,7 +1954,10 @@ function showImportReview(review) {
   for (const [label, value] of [
     ["Anúncios", review.summary.total],
     ["Novos", review.summary.newListings],
+    ["Conhecidos", review.summary.knownListings],
     ["Alterações de preço", review.summary.priceChanges],
+    ["Alterações de metadados", review.summary.metadataChanges],
+    ["Campos desconhecidos", review.summary.unknownFields],
     ["Dados conservados", review.summary.preservedListings],
   ]) {
     const card = el("div", null, "stat");
@@ -1998,6 +2007,9 @@ function showImportReview(review) {
           "status-note",
         ),
       );
+    if (sample.unknownFieldLabels?.length)
+      card.append(el("p", "Campos desconhecidos após a importação: " +
+        sample.unknownFieldLabels.join(", "), "status-note"));
     for (const change of sample.changes) {
       const value = (field, v) =>
         field === "priceCents"
@@ -2659,7 +2671,7 @@ async function refreshDiagnostics() {
       el("p", source.action, "muted"),
       el(
         "p",
-        "Pesquisa: " +
+          "Método: " + source.method + " · Pesquisa: " +
           (source.checks.queryConfigured ? "configurada" : "em falta") +
           " · Autorização: " +
           (source.checks.permissionDocumented

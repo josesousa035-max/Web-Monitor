@@ -19,6 +19,35 @@ const base = (extra = {}) => ({
   areaType: "gross",
   ...extra,
 });
+test("revisão conta desconhecidos no resultado final sem confundir zero ou dados conservados", async () => {
+  const s = await Store.open();
+  s.import([base()]);
+  const session = new ImportSession(s);
+  const review = session.prepare([base({ price: undefined, area: undefined, areaType: undefined, coordinates: null }), base({ reference: "2", price: 0, area: null })], { sourceId: "idealista" });
+  assert.equal(review.summary.knownListings, 1);
+  assert.equal(review.summary.newListings, 1);
+  assert.equal(review.summary.priceChanges, 0);
+  assert.equal(review.summary.unknownPrices, 0);
+  assert.equal(review.summary.unknownFields, review.samples.reduce((sum, sample) => sum + sample.unknownFields.length, 0));
+  const known = review.samples.find((sample) => !sample.isNew);
+  assert.ok(!known.unknownFields.includes("priceCents"));
+  assert.ok(!known.unknownFields.includes("area"));
+  assert.ok(known.unknownFieldLabels.includes("Coordenadas"));
+  assert.ok(review.samples.find((sample) => sample.isNew).unknownFields.includes("area"));
+  s.close();
+});
+test("alterar catálogo depois da revisão exige nova revisão e não cria backup", async () => {
+  const s = await Store.open();
+  let backups = 0;
+  const session = new ImportSession(s, { beforeCommit: () => backups++ });
+  const review = session.prepare([base()], { sourceId: "idealista" });
+  s.saveSource({ ...s.source("idealista"), enabled: false });
+  assert.throws(() => session.confirm(review.token), /mudaram/);
+  assert.equal(backups, 0);
+  assert.equal(s.list().length, 0);
+  assert.equal(s.runs().length, 0);
+  s.close();
+});
 test("revisão não grava; cancelar e confirmar token cancelado preservam estado", async () => {
   const s = await Store.open();
   let backups = 0;

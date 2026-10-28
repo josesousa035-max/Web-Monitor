@@ -37,6 +37,7 @@ app.on("browser-window-created", (_, win) => {
       const result = await win.webContents.executeJavaScript(`(async()=>{
         const cancelled=await window.monitor.prepareImport('idealista');
         if(!cancelled.ok || cancelled.data.summary.newListings!==1)throw Error('Revisão desktop falhou');
+        if(cancelled.data.summary.unknownFields<=0 || !cancelled.data.samples[0].unknownFieldLabels.length)throw Error('Campos desconhecidos ausentes da revisão');
         const before=await window.monitor.list();if(before.data.listings.length!==0)throw Error('Revisão escreveu dados');
         await window.monitor.cancelImport(cancelled.data.token);
         const prepared=await window.monitor.prepareImport('idealista');
@@ -50,6 +51,7 @@ app.on("browser-window-created", (_, win) => {
         const data=await window.monitor.list();
         if(!data.ok || data.data.listings.length!==1 || data.data.alerts.length!==1)throw Error('Persistência/alertas desktop falharam');
         const diagnostic=await window.monitor.diagnostics('povoa-de-lanhoso');if(!diagnostic.ok || diagnostic.data.storage.integrity!=='ok' || diagnostic.data.networkVerified!==false)throw Error('Diagnóstico desktop falhou');
+        if(!diagnostic.data.sources.every(source=>typeof source.method==='string'))throw Error('Método ausente do diagnóstico');
         const exported=await window.monitor.export();
         if(!exported.ok || !exported.data)throw Error('Exportação desktop falhou');
         return {sandboxed:typeof require==='undefined',title:document.title};
