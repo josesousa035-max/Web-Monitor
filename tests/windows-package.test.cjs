@@ -5,6 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const vm = require("node:vm");
 const { createRequire } = require("node:module");
+const { finished } = require("node:stream/promises");
 const asar = require("@electron/asar");
 
 test("verificador Windows: caminhos nativos ASAR e rejeição de fonte alterada/ausente", async (t) => {
@@ -22,7 +23,29 @@ test("verificador Windows: caminhos nativos ASAR e rejeição de fonte alterada/
   write("payload/package.json", JSON.stringify(pkg));
   const archive = path.join(root, "dist/win-unpacked/resources/app.asar");
   fs.mkdirSync(path.dirname(archive), { recursive: true });
-  await asar.createPackage(path.join(root, "payload"), archive);
+  const asarDisk = require(path.join(path.dirname(require.resolve("@electron/asar")), "wrapped-fs.js")).default;
+  const originalWriteStream = asarDisk.createWriteStream;
+  // Delay the final payload to reproduce slower Windows disk scheduling on
+  // every host. Header writes proceed normally; this does not alter the bytes.
+  const expected = fs.readFileSync(path.join(root, source));
+  asarDisk.createWriteStream = (file, ...args) => {
+    const out = originalWriteStream(file, ...args);
+    if (file === archive) {
+      const write = out._write.bind(out), writev = out._writev.bind(out);
+      out._write = (chunk, encoding, callback) => chunk.includes(expected)
+        ? setTimeout(() => write(chunk, encoding, callback), 50) : write(chunk, encoding, callback);
+      out._writev = (chunks, callback) => chunks.some((x) => x.chunk.includes(expected))
+        ? setTimeout(() => writev(chunks, callback), 50) : writev(chunks, callback);
+    }
+    return out;
+  };
+  try {
+    const archiveStream = await asar.createPackage(path.join(root, "payload"), archive);
+    // ASAR 3.x returns the stream before its last write has finished.
+    await finished(archiveStream);
+  } finally {
+    asarDisk.createWriteStream = originalWriteStream;
+  }
   const pe = Buffer.alloc(128);
   pe.write("MZ"); pe.writeUInt32LE(64, 60); pe.write("PE\0\0", 64); pe.writeUInt16LE(0x8664, 68);
   write("dist/win-unpacked/Web Monitor.exe", pe);

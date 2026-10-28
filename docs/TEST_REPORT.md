@@ -1,5 +1,15 @@
 # Relatório de validação — 0.3.1
 
+## Correção da gravação assíncrona do ASAR de teste — 28/10/2026
+
+O novo log Windows fornecido pelo utilizador mostra 69/70 testes aprovados; o teste windows-package falhou ao comparar a fonte do ASAR sintético, antes do empacotamento. Os avisos npm de depreciação/install-scripts não causaram esta falha. Antes de alterar, 70 testes passaram nesta cloud Linux.
+
+A função createPackage de @electron/asar 3.4.1 devolve o fluxo de saída depois de end(), antes de writableFinished. O teste lia o ASAR cedo demais, podendo obter bytes incompletos no último ficheiro. Agora aguarda `finished(archiveStream)` de node:stream/promises. Para tornar a regressão reproduzível em Linux e Windows, o teste atrasa em 50 ms a escrita final do payload, sem alterar os bytes, e repõe o adaptador de escrita em finally.
+
+Verificação da causa executada: sem a espera, a versão do teste com escrita atrasada falhou exatamente com `Fonte empacotada diferente: src/core/catalog-store.cjs`; com a espera, passou, incluindo rejeição de fontes alteradas/ausentes e os dois formatos de caminho. Experiência isolada confirmou bytes diferentes antes do fim do fluxo e iguais depois. Não se retiraram asserções nem se alterou o verificador real, o runtime, a base ou os instaladores.
+
+`npm run test:report`: **70 aprovados, 0 falhados, 0 ignorados**, ~1,78 s. `node scripts/verify-windows.cjs --portable`: aprovado no pacote existente (21 fontes, PE x64, WASM e SHA-256 inalterados). `git diff --check` aprovado. Nova CI nativa por confirmar; os resultados locais não comprovam sucesso remoto ou instalação Windows.
+
 ## Correção do verificador ASAR Windows — 28/10/2026
 
 Log fornecido: verify:win falha em extractFile para `src/core/catalog-store.cjs`. Antes de alterar, 69 testes locais aprovados. A biblioteca @electron/asar 3.4.1 divide diretórios por path.sep; o verificador convertia os caminhos relativos Windows para `/`, impedindo a procura de entradas aninhadas. A correção conserva o caminho nativo, mantendo a comparação integral dos bytes.

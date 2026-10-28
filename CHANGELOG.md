@@ -2,6 +2,8 @@
 
 ## 0.3.1 — 28 de outubro de 2026
 
+- Corrigida condição de corrida no teste do pacote Windows: aguardar o fim do fluxo de escrita do ASAR sintético antes da leitura. Gravação final atrasada no teste reproduz deterministicamente a falha anterior, mantendo todas as verificações de integridade. 70 testes locais aprovados.
+
 - Corrigido verify:win: consultas ASAR usam separadores nativos, sem converter caminhos Windows em POSIX. Regressão reproduz a falha com a implementação ASAR instalada, verifica POSIX/Windows e mantém rejeição de fontes alteradas/ausentes. 70 testes locais aprovados.
 
 - Corrigida falha CSP da preview em checkout Windows: normalizar CRLF/CR para LF antes de calcular hashes e incorporar scripts/estilos. Teste de regressão reproduziu a falha e verifica HTML idêntico entre terminações de linha; 69 testes locais aprovados.
