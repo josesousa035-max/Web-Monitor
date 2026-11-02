@@ -2,6 +2,12 @@
 
 ## 0.3.1 — 28 de outubro de 2026
 
+### Auditoria de 2 de novembro de 2026
+
+- Corrigida contagem de referências repetidas idênticas no diário por fonte, alinhando-a com a revisão, alertas e importação.
+- A amostra de revisão prioriza alterações de anúncios conhecidos, mesmo quando existem mais de 40 novos.
+- Prompt e critérios de execução registados em docs/prompts/AUDITORIA_v0.3.1.md; 72 testes locais aprovados.
+
 - Corrigida condição de corrida no teste do pacote Windows: aguardar o fim do fluxo de escrita do ASAR sintético antes da leitura. Gravação final atrasada no teste reproduz deterministicamente a falha anterior, mantendo todas as verificações de integridade. 70 testes locais aprovados.
 
 - Corrigido verify:win: consultas ASAR usam separadores nativos, sem converter caminhos Windows em POSIX. Regressão reproduz a falha com a implementação ASAR instalada, verifica POSIX/Windows e mantém rejeição de fontes alteradas/ausentes. 70 testes locais aprovados.

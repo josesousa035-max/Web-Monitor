@@ -1,5 +1,11 @@
 # Relatório de validação — 0.3.1
 
+## Auditoria da revisão e diário — 2 de novembro de 2026
+
+Auditoria local com 70 testes aprovados antes das alterações. Duas falhas foram reproduzidas por testes antes da correção: duplicados idênticos contavam duas vezes no diário apesar de contarem uma vez na revisão/importação; com 45 novos, a amostra ocultava uma alteração de preço conhecida. A confirmação agora usa observações únicas e a amostra prioriza alterações de anúncios conhecidos. Duplicados contraditórios continuam recusados; nenhuma alteração de esquema ou migração.
+
+`npm run test:report` e `npm test`: **72 aprovados, 0 falhados, 0 ignorados**. Build Linux `npm run build -- --config.electronDist=node_modules/electron/dist` concluído. `npm run benchmark` com 1.000 anúncios sintéticos em memória: inicialização ~36,65 ms, importação ~77,88 ms, 100 consultas ~586,49 ms, RSS Node ~109,3 MiB; não mede Electron nem é comparação controlada de desempenho. `npm run test:desktop`: abortou antes das asserções devido à sandbox SUID indisponível (SIGTRAP), sem desativar proteção. API GitHub Actions respondeu Forbidden; a execução remota e instaladores Windows/macOS continuam por confirmar. Prompt e critérios: docs/prompts/AUDITORIA_v0.3.1.md.
+
 ## Correção da gravação assíncrona do ASAR de teste — 28/10/2026
 
 O novo log Windows fornecido pelo utilizador mostra 69/70 testes aprovados; o teste windows-package falhou ao comparar a fonte do ASAR sintético, antes do empacotamento. Os avisos npm de depreciação/install-scripts não causaram esta falha. Antes de alterar, 70 testes passaram nesta cloud Linux.

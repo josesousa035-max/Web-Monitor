@@ -4,7 +4,7 @@
 
 Em Fontes, selecione Importar anúncios e escolha um ficheiro. A aplicação prepara uma revisão com totais e amostra de até 40 anúncios: novos, conhecidos, alterações de preço, alterações de metadados e campos antigos conservados. O limite é 10 MB e 10.000 anúncios por revisão.
 
-Nenhum anúncio, alerta, diário ou backup é gravado ao preparar/cancelar. Na confirmação é criado um backup preventivo e a alteração da base é transacional. Se a gravação falhar, os dados voltam ao estado anterior; o backup preventivo pode permanecer como cópia recuperável. O diário é dividido pelas fontes realmente presentes num ficheiro misto.
+Nenhum anúncio, alerta, diário ou backup é gravado ao preparar/cancelar. Na confirmação é criado um backup preventivo e a alteração da base é transacional. Se a gravação falhar, os dados voltam ao estado anterior; o backup preventivo pode permanecer como cópia recuperável. O diário é dividido pelas fontes realmente presentes num ficheiro misto. Referências repetidas idênticas contam uma vez por fonte; duplicados contraditórios são recusados. A amostra dá prioridade a anúncios conhecidos com alterações, seguida de novos e conhecidos sem alterações; os totais abrangem todos os anúncios únicos.
 
 Uma revisão dura 15 minutos e só pode ser confirmada uma vez. Outra revisão invalida a anterior. Se entretanto houver uma atualização, restauro, alteração de configurações ou catálogo, é preciso rever novamente. Só o token é enviado para confirmar/cancelar; o renderer não escolhe caminhos arbitrários ou substitui os anúncios revistos.
 

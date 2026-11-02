@@ -19,6 +19,32 @@ const base = (extra = {}) => ({
   areaType: "gross",
   ...extra,
 });
+test("duplicados idênticos contam uma vez no diário por fonte e nos alertas", async () => {
+  const s = await Store.open();
+  const session = new ImportSession(s);
+  const other = base({ source: "boulder", url: "https://boulderimobiliaria.pt/1" });
+  const review = session.prepare([base(), base(), other, other], { sourceId: "idealista" });
+  assert.equal(review.summary.total, 2);
+  const result = session.confirm(review.token);
+  assert.equal(result.summary.count, 2);
+  assert.equal(result.alerts.length, 2);
+  assert.deepEqual(s.runs().map((r) => r.items).sort(), [1, 1]);
+  assert.equal(s.source("idealista").lastResult.items, 1);
+  s.close();
+});
+test("amostra mostra alterações de preço antes de muitos anúncios novos", async () => {
+  const s = await Store.open();
+  s.import([base()]);
+  const session = new ImportSession(s);
+  const newcomers = Array.from({length: 45}, (_, i) => base({ reference: `new-${i}` }));
+  const review = session.prepare([...newcomers, base({ price: 190000 })], { sourceId: "idealista" });
+  assert.equal(review.summary.total, 46);
+  assert.equal(review.summary.priceChanges, 1);
+  assert.equal(review.samples.length, 40);
+  assert.ok(review.samples.some((row) => row.key === "idealista:1" && row.changes.some((change) => change.field === "priceCents")));
+  assert.ok(review.samples.some((row) => row.isNew));
+  s.close();
+});
 test("revisão conta desconhecidos no resultado final sem confundir zero ou dados conservados", async () => {
   const s = await Store.open();
   s.import([base()]);

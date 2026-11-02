@@ -38,10 +38,12 @@ function review(entries) {
     summary.unknownFields += unknownFields(entry.next).length;
     if (entry.preservedFields.length) summary.preservedListings++;
   }
+  const rank = (entry) =>
+    entry.previous && entry.changes.length ? 0 : entry.previous ? 2 : 1;
   const samples = [...entries]
     .sort(
       (a, b) =>
-        Number(!!a.previous) - Number(!!b.previous) ||
+        rank(a) - rank(b) ||
         b.changes.length - a.changes.length,
     )
     .slice(0, 40)
@@ -102,7 +104,16 @@ class ImportSession {
     // Stage the observation, not the merged snapshot: omissions remain omissions.
     const { normalize } = require("./store.cjs");
     const catalog = this.store.sources();
-    const stagedRows = data.map((x) => normalize(x, catalog));
+    // prepareImport has already rejected conflicting duplicates; use one
+    // observation per identity for both the confirmed import and its journal.
+    const stagedRows = [
+      ...new Map(
+        data.map((x) => {
+          const row = normalize(x, catalog);
+          return [row.key, row];
+        }),
+      ).values(),
+    ];
     const output = {
       token,
       label: String(label)
